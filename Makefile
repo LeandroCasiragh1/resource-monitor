@@ -1,17 +1,23 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -Iinclude
+CFLAGS = -Wall -Wextra -O2 -Iinclude -std=gnu11
 LDFLAGS =
-SRC = $(wildcard src/*.c)
-OBJ = $(SRC:.c=.o)
-BIN = bin/resource-monitor
+SRCS = $(wildcard src/*.c)
+OBJS = $(SRCS:.c=.o)
 
-all: $(BIN)
+BIN_DIR = bin
+MAIN_BIN = $(BIN_DIR)/resource-monitor
+PROFILER_BIN = $(BIN_DIR)/resource-profiler
 
-$(BIN): $(OBJ) | bin
-	$(CC) $(LDFLAGS) -o $@ $(OBJ)
+all: $(MAIN_BIN) $(PROFILER_BIN)
 
-bin:
-	mkdir -p bin
+$(MAIN_BIN): src/main.o $(filter-out src/resource_profiler.o src/resource_profiler_main.o,$(OBJS)) | $(BIN_DIR)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+$(PROFILER_BIN): src/resource_profiler.o src/resource_profiler_main.o | $(BIN_DIR)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -25,6 +31,6 @@ $(BIN_DIR)/test_runner: $(filter-out src/main.o,$(OBJS)) $(wildcard tests/*.c) |
 	$(CC) $(CFLAGS) -Iinclude -o $@ $(filter-out src/main.o,$(OBJS)) tests/*.c
 
 clean:
-	rm -rf bin/*.o src/*.o bin resource-monitor
+	rm -rf $(BIN_DIR)/*.o src/*.o $(BIN_DIR)/*
 
 .PHONY: all clean tests
