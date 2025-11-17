@@ -3,6 +3,7 @@
 ## Current Status
 
 Already merged PRs (visible in git log):
+
 - ✅ #1 resource-profiler → master
 - ✅ #2 cgroup-manager → master
 - ✅ #3 namespace-analyzer → master
@@ -40,9 +41,11 @@ Already merged PRs (visible in git log):
 ## Windows Port Implementation
 
 ### Description
+
 Adds Windows-compatible versions of resource monitoring tools using Windows API.
 
 ### Changes
+
 - `resource_profiler_windows.c`: Uses Windows API (GetProcessTimes, GetProcessMemoryInfo)
 - `namespace_analyzer_windows.c`: Linux-only stub with informative error
 - `cgroup_manager_windows.c`: Linux-only stub with informative error
@@ -50,31 +53,37 @@ Adds Windows-compatible versions of resource monitoring tools using Windows API.
 - `docs/WINDOWS_PORT.md`: Comprehensive Windows port guide
 
 ### Features
+
 ✅ Resource Profiler functional on Windows (user/kernel time, memory metrics)
 ⚠️ Namespace Analyzer / Cgroup Manager: Informative stubs (requires Linux)
 ✅ WSL2 support for full functionality
 
 ### Type of Change
+
 - [x] New feature (non-breaking change which adds functionality)
 - [x] Platform/Portability enhancement
 - [ ] Breaking change
 
 ### Testing
+
 - [x] Build script tested on Windows (GCC/MinGW)
 - [x] Compiles without errors
 - [ ] Need manual testing on target platform
 
 ### Documentation
+
 - [x] Updated WINDOWS_PORT.md with comprehensive guide
 - [x] Build instructions included
 - [x] Usage examples provided
 
 ### Notes
+
 - Namespace and Cgroup features are Linux-kernel-specific and cannot be ported to Windows
 - Recommended for Windows developers: Use WSL2 for full feature support
 - Resource Profiler provides equivalent functionality using Windows APIs
 
 ### Checklist
+
 - [x] Code follows project style guidelines
 - [x] Self-review of code completed
 - [x] Comments added for complex sections
@@ -99,12 +108,14 @@ gh pr create `
 ## Merging Strategy
 
 ### After PR Creation:
+
 1. Review own code changes
 2. Check for conflicts (should be none)
 3. Merge with "Squash and merge" or "Create a merge commit"
 4. Delete branch after merge (optional)
 
 ### Recommended Merge Order (if any dependencies):
+
 1. windows-port (independent; can be merged anytime)
 2. Other branches (already merged)
 

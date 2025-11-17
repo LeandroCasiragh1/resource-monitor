@@ -2,11 +2,12 @@
 
 ## 🚀 What Was Just Completed
 
-Your Windows port for the RA3 Resource Monitor is **COMPLETE and READY for production**. 
+Your Windows port for the RA3 Resource Monitor is **COMPLETE and READY for production**.
 
 Everything has been:
+
 - ✅ Coded
-- ✅ Documented  
+- ✅ Documented
 - ✅ Committed
 - ✅ Pushed to GitHub
 
@@ -17,13 +18,14 @@ Everything has been:
 **Current Branch**: `windows-port`  
 **Status**: All changes committed & pushed  
 **Working Tree**: Clean (no uncommitted files)  
-**Last Commit**: Session completion summary  
+**Last Commit**: Session completion summary
 
 ---
 
 ## 🎓 What You Have
 
 ### 1. **Working Windows Code** (3 new files)
+
 ```
 ✅ src/resource_profiler_windows.c       - Uses Windows API
 ✅ src/namespace_analyzer_windows.c      - Linux-only stub
@@ -31,11 +33,13 @@ Everything has been:
 ```
 
 ### 2. **Working Build Script** (1 updated)
+
 ```
 ✅ build.ps1                             - PowerShell build (MinGW)
 ```
 
 ### 3. **Complete Documentation** (7 new guides)
+
 - `WINDOWS_PORT.md` - How to build & use on Windows
 - `WINDOWS_PORT_COMPLETION_REPORT.md` - Implementation details
 - `WINDOWS_PORT_SUMMARY.md` - Executive summary
@@ -49,18 +53,23 @@ Everything has been:
 ## ⚡ Quick Reference
 
 ### To Understand What Was Done
+
 **Read first**: `WINDOWS_PORT_SUMMARY.md` (5 min read)
 
 ### To Build on Windows
+
 **Read then execute**: `build.ps1` instructions in `WINDOWS_PORT.md` (10 min)
 
 ### To Create PR on GitHub
+
 **Use template**: `PR_GUIDE.md` (15 min)
 
-### To Review Implementation  
+### To Review Implementation
+
 **Check checklist**: `WINDOWS_PORT_COMPLETION_REPORT.md` (30 min)
 
 ### To See File Organization
+
 **Reference**: `FILE_INVENTORY.md` (quick lookup)
 
 ---
@@ -75,7 +84,7 @@ Status:              ✅ UP TO DATE
 
 Last 3 Commits:
   74eb81b - docs: Add session completion summary
-  f5293cb - docs: Add executive summary  
+  f5293cb - docs: Add executive summary
   d7b9bdd - docs: Add file inventory
 ```
 
@@ -83,37 +92,41 @@ Last 3 Commits:
 
 ## ✅ Quality Status
 
-| Aspect | Status |
-|--------|--------|
-| Code Works | ✅ Yes |
-| Docs Complete | ✅ Yes |
-| Git Clean | ✅ Yes |
-| Build System | ✅ Working |
-| Error Handling | ✅ Good |
+| Aspect           | Status             |
+| ---------------- | ------------------ |
+| Code Works       | ✅ Yes             |
+| Docs Complete    | ✅ Yes             |
+| Git Clean        | ✅ Yes             |
+| Build System     | ✅ Working         |
+| Error Handling   | ✅ Good            |
 | Platform Support | ✅ Linux + Windows |
-| Production Ready | ✅ YES |
+| Production Ready | ✅ YES             |
 
 ---
 
 ## 🎬 Next Actions (In Order)
 
 ### Step 1: Review (15-30 min)
+
 1. Read `WINDOWS_PORT_SUMMARY.md`
 2. Scan `WINDOWS_PORT_COMPLETION_REPORT.md`
 3. Review the code changes (3 new .c files)
 
 ### Step 2: Create PR (5 min)
+
 1. Go to: https://github.com/LeandroCasiragh1/resource-monitor
 2. Create new PR: windows-port → master
 3. Use template from `PR_GUIDE.md`
 4. Submit PR
 
 ### Step 3: Test (10 min)
+
 1. On Windows with MinGW: `.\build.ps1`
 2. Run: `.\bin\resource-profiler.exe <PID>`
 3. Verify CSV output format
 
 ### Step 4: Merge (2 min)
+
 1. Approve PR
 2. Click "Merge pull request"
 3. Delete branch (optional)
@@ -151,16 +164,19 @@ PROJECT_STATUS.md
 ## 💡 Key Points
 
 1. **Resource Profiler Works on Windows**
+
    - Uses Windows API (GetProcessTimes, GetProcessMemoryInfo)
    - Produces same CSV format as Linux version
    - Full functionality
 
 2. **Namespace/Cgroup are Linux-Only**
+
    - Windows stubs explain why
    - Users guided to WSL2 for full features
    - Honest about platform limitations
 
 3. **All Code is Committed**
+
    - 9 commits on windows-port branch
    - All pushed to origin
    - Ready for PR anytime
@@ -219,6 +235,7 @@ A: See "Next Steps" in `WINDOWS_PORT_SUMMARY.md` (I/O monitoring, experiments, e
 ## ✨ Summary
 
 You now have a **production-ready Windows port** with:
+
 - ✅ Working implementation
 - ✅ Comprehensive documentation
 - ✅ Clean git history
