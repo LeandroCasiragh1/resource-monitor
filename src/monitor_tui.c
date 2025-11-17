@@ -92,12 +92,12 @@ void show_namespace_menu() {
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
     mvprintw(5, 2, "Namespaces do sistema:");
-    mvprintw(7, 2, "  • User Namespace");
-    mvprintw(8, 2, "  • PID Namespace");
-    mvprintw(9, 2, "  • IPC Namespace");
-    mvprintw(10, 2, "  • Network Namespace");
-    mvprintw(11, 2, "  • Mount Namespace");
-    mvprintw(12, 2, "  • UTS Namespace");
+    mvprintw(7, 2, "  - User Namespace");
+    mvprintw(8, 2, "  - PID Namespace");
+    mvprintw(9, 2, "  - IPC Namespace");
+    mvprintw(10, 2, "  - Network Namespace");
+    mvprintw(11, 2, "  - Mount Namespace");
+    mvprintw(12, 2, "  - UTS Namespace");
     
     mvprintw(14, 2, "Pressione qualquer tecla para voltar...");
     refresh();
@@ -114,10 +114,10 @@ void show_cgroup_menu() {
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
     mvprintw(5, 2, "Funcionalidades:");
-    mvprintw(7, 2, "  • Listar cgroups");
-    mvprintw(8, 2, "  • Criar novo cgroup");
-    mvprintw(9, 2, "  • Mover processo");
-    mvprintw(10, 2, "  • Limitar CPU, Memória, I/O");
+    mvprintw(7, 2, "  - Listar cgroups");
+    mvprintw(8, 2, "  - Criar novo cgroup");
+    mvprintw(9, 2, "  - Mover processo");
+    mvprintw(10, 2, "  - Limitar CPU, Memória, I/O");
     
     mvprintw(12, 2, "Pressione qualquer tecla para voltar...");
     refresh();
