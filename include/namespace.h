@@ -14,4 +14,10 @@ int namespace_compare(pid_t pid1, pid_t pid2);
  */
 int namespace_map_by_type(const char *ns_type);
 
+/* Measure average time to create a given namespace type over N iterations */
+int namespace_creation_overhead(const char *ns_type, int iterations);
+
+/* Print a global system report with per-namespace counts */
+int namespace_system_report(void);
+
 #endif // NAMESPACE_H

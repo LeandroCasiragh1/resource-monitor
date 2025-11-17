@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -78,6 +79,29 @@ int cgroup_create(const char *name) {
     }
     perror("mkdir");
     return -1;
+}
+
+int cgroup_set_cpu_limit_quota(const char *name, long quota, long period) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s/cpu.max", CGROUP_ROOT, name);
+    FILE *f = fopen(path, "w");
+    if (!f) { perror("open cpu.max"); return -1; }
+    if (quota < 0) fprintf(f, "max %ld\n", period);
+    else fprintf(f, "%ld %ld\n", quota, period);
+    fclose(f);
+    printf("cpu.max set for %s to %ld/%ld\n", name, quota, period);
+    return 0;
+}
+
+int cgroup_set_memory_max(const char *name, unsigned long bytes) {
+    char path[512];
+    snprintf(path, sizeof(path), "%s/%s/memory.max", CGROUP_ROOT, name);
+    FILE *f = fopen(path, "w");
+    if (!f) { perror("open memory.max"); return -1; }
+    fprintf(f, "%lu\n", bytes);
+    fclose(f);
+    printf("memory.max set for %s to %lu bytes\n", name, bytes);
+    return 0;
 }
 
 int cgroup_move_pid(const char *cgroup_path, pid_t pid) {

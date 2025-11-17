@@ -132,9 +132,9 @@ Mostra todos os namespaces do processo especificado.
 # Via linha de comando:
 sudo ./bin/cgroup_manager create my_group
 sudo ./bin/cgroup_manager set-cpu my_group 50000 100000  # 50% CPU
-sudo ./bin/cgroup_manager set-memory my_group 512M
-sudo ./bin/cgroup_manager add-process my_group 1234
-sudo ./bin/cgroup_manager delete my_group
+sudo ./bin/cgroup_manager set-mem my_group 536870912   # 512MB em bytes
+sudo ./bin/cgroup_manager move /sys/fs/cgroup/my_group 1234  # mover PID para o cgroup
+sudo ./bin/cgroup_manager read /sys/fs/cgroup/my_group       # ler métricas
 ```
 
 ### Experimentos
