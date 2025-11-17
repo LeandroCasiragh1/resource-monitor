@@ -10,6 +10,8 @@
 #include <sys/stat.h>
 #include <ncurses.h>
 #include "../include/resource_profiler.h"
+#include "../include/namespace.h"
+#include "../include/cgroup.h"
 
 /* Cores */
 #define COLOR_TITLE 1
@@ -89,45 +91,73 @@ void show_monitor_menu() {
     end_ncurses();
 }
 
-/* Menu de namespaces */
-void show_namespace_menu() {
+/* Submenu real de namespaces */
+static void show_namespace_menu() {
     init_ncurses();
-    clear();
-    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
-    mvprintw(2, 2, "[#] Namespace Analyzer");
-    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
-    
-    mvprintw(5, 2, "Namespaces do sistema:");
-    mvprintw(7, 2, "  - User Namespace");
-    mvprintw(8, 2, "  - PID Namespace");
-    mvprintw(9, 2, "  - IPC Namespace");
-    mvprintw(10, 2, "  - Network Namespace");
-    mvprintw(11, 2, "  - Mount Namespace");
-    mvprintw(12, 2, "  - UTS Namespace");
-    
-    mvprintw(14, 2, "Pressione qualquer tecla para voltar...");
-    refresh();
-    getch();
+    int sel = 0; int ch;
+    const char *items[] = {
+        "Listar namespaces de um PID",
+        "Comparar namespaces de dois PIDs",
+        "Mapear processos por tipo",
+        "Overhead de criação",
+        "Relatório global",
+        "Voltar"
+    };
+    int n = 6;
+    while (1) {
+        clear();
+        attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+        mvprintw(1,2,"[#] Namespace Analyzer");
+        attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+        for (int i=0;i<n;i++) {
+            if (i==sel) { attron(COLOR_PAIR(COLOR_SELECTED)|A_BOLD); mvprintw(3+i,4,"> %d) %s", i+1, items[i]); attroff(COLOR_PAIR(COLOR_SELECTED)|A_BOLD);} else { mvprintw(3+i,4,"  %d) %s", i+1, items[i]); }
+        }
+        mvprintw(12,2,"↑↓ navega, ENTER seleciona, Q sai");
+        refresh();
+        ch = getch();
+        if (ch=='q'||ch=='Q') break;
+        if (ch==KEY_UP) sel=(sel-1+n)%n; else if (ch==KEY_DOWN) sel=(sel+1)%n; else if (ch=='\n') {
+            if (sel==n-1) break;
+            clear();
+            if (sel==0) { /* listar */
+                echo(); curs_set(1); char buf[32]; mvprintw(2,2,"PID: "); getstr(buf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(buf); end_ncurses(); namespace_list_for_pid(p); init_ncurses();
+            } else if (sel==1) { /* comparar */
+                echo(); curs_set(1); char a[32], b[32]; mvprintw(2,2,"PID1: "); getstr(a); mvprintw(3,2,"PID2: "); getstr(b); noecho(); curs_set(0); pid_t p1=(pid_t)atoi(a), p2=(pid_t)atoi(b); end_ncurses(); namespace_compare(p1,p2); init_ncurses();
+            } else if (sel==2) { /* mapear */
+                echo(); curs_set(1); char t[32]; mvprintw(2,2,"Tipo (pid/net/mnt/uts/ipc/user/cgroup): "); getstr(t); noecho(); curs_set(0); end_ncurses(); namespace_map_by_type(t); init_ncurses();
+            } else if (sel==3) { /* overhead */
+                echo(); curs_set(1); char t[32], it[32]; mvprintw(2,2,"Tipo: "); getstr(t); mvprintw(3,2,"Iterações: "); getstr(it); noecho(); curs_set(0); int iterations=atoi(it); end_ncurses(); namespace_creation_overhead(t, iterations); init_ncurses();
+            } else if (sel==4) { end_ncurses(); namespace_system_report(); init_ncurses(); }
+            mvprintw(10,2,"(Saída acima gerada fora do ncurses)"); mvprintw(11,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
+        } else if (ch>='1'&&ch<='6') { sel=ch-'1'; }
+    }
     end_ncurses();
 }
 
-/* Menu de cgroups */
-void show_cgroup_menu() {
-    init_ncurses();
-    clear();
-    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
-    mvprintw(2, 2, "[+] Cgroup Manager - Cgroups v2");
-    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
-    
-    mvprintw(5, 2, "Funcionalidades:");
-    mvprintw(7, 2, "  - Listar cgroups");
-    mvprintw(8, 2, "  - Criar novo cgroup");
-    mvprintw(9, 2, "  - Mover processo");
-    mvprintw(10, 2, "  - Limitar CPU, Memória, I/O");
-    
-    mvprintw(12, 2, "Pressione qualquer tecla para voltar...");
-    refresh();
-    getch();
+/* Submenu real de cgroups */
+static void show_cgroup_menu() {
+    init_ncurses(); int sel=0; int ch; const char *items[]={
+        "Criar cgroup",
+        "Ler métricas",
+        "Mover PID",
+        "Set CPU quota",
+        "Set Mem max",
+        "Voltar"
+    }; int n=6;
+    while (1) {
+        clear(); attron(COLOR_PAIR(COLOR_TITLE)|A_BOLD); mvprintw(1,2,"[+] Cgroup Manager"); attroff(COLOR_PAIR(COLOR_TITLE)|A_BOLD);
+        for (int i=0;i<n;i++){ if(i==sel){attron(COLOR_PAIR(COLOR_SELECTED)|A_BOLD); mvprintw(3+i,4,"> %d) %s", i+1, items[i]); attroff(COLOR_PAIR(COLOR_SELECTED)|A_BOLD);} else mvprintw(3+i,4,"  %d) %s", i+1, items[i]); }
+        mvprintw(11,2,"↑↓ navega | ENTER seleciona | Q sai"); refresh(); ch=getch();
+        if (ch=='q'||ch=='Q') break; if(ch==KEY_UP) sel=(sel-1+n)%n; else if(ch==KEY_DOWN) sel=(sel+1)%n; else if(ch=='\n') {
+            if (sel==n-1) break; clear();
+            if (sel==0){ echo(); curs_set(1); char name[64]; mvprintw(2,2,"Nome: "); getstr(name); noecho(); curs_set(0); end_ncurses(); int r=cgroup_create(name); printf("create(%s) => %d\n", name,r); init_ncurses(); }
+            else if (sel==1){ echo(); curs_set(1); char path[128]; mvprintw(2,2,"Path completo (/sys/fs/cgroup/<grupo>): "); getstr(path); noecho(); curs_set(0); end_ncurses(); int r=cgroup_read_metrics(path); printf("read(%s) => %d\n", path,r); init_ncurses(); }
+            else if (sel==2){ echo(); curs_set(1); char path[128], pidbuf[16]; mvprintw(2,2,"Path: "); getstr(path); mvprintw(3,2,"PID: "); getstr(pidbuf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(pidbuf); end_ncurses(); int r=cgroup_move_pid(path,p); printf("move(%s,%d) => %d\n", path,(int)p,r); init_ncurses(); }
+            else if (sel==3){ echo(); curs_set(1); char name[64], quota[32], period[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Quota: "); getstr(quota); mvprintw(4,2,"Period: "); getstr(period); noecho(); curs_set(0); long q=atol(quota), per=atol(period); end_ncurses(); int r=cgroup_set_cpu_limit_quota(name,q,per); printf("set-cpu(%s,%ld,%ld) => %d\n", name,q,per,r); init_ncurses(); }
+            else if (sel==4){ echo(); curs_set(1); char name[64], mem[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Mem max bytes: "); getstr(mem); noecho(); curs_set(0); unsigned long m=strtoul(mem,NULL,10); end_ncurses(); int r=cgroup_set_memory_max(name,m); printf("set-mem(%s,%lu) => %d\n", name,m,r); init_ncurses(); }
+            mvprintw(8,2,"(Saída acima gerada fora do ncurses)"); mvprintw(9,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
+        } else if (ch>='1'&&ch<='6') sel=ch-'1';
+    }
     end_ncurses();
 }
 
