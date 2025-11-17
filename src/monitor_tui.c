@@ -510,7 +510,7 @@ int main(int argc, char *argv[]) {
                 show_experiments_menu();
                 break;
             case 5:
-                printf("Até logo! 👋\n");
+                printf("Até logo!\n");
                 return 0;
             default:
                 return 1;
