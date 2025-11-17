@@ -289,7 +289,7 @@ int show_main_menu(void) {
         
         /* Rodapé */
         attron(COLOR_PAIR(COLOR_INFO));
-        mvprintw(max_y - 2, 2, "↑↓=Navegar | Enter=Selecionar | 1-5=Escolher | Q=Sair");
+        mvprintw(max_y - 2, 2, "Setinhas=Navegar | Enter=Selecionar | 1-5=Escolher | Q=Sair");
         attroff(COLOR_PAIR(COLOR_INFO));
         
         refresh();
