@@ -40,6 +40,7 @@ sudo pacman -S gcc make ncurses util-linux iproute2 coreutils
 ```
 
 **Pacotes necessários:**
+
 - `gcc` - Compilador C (GCC 9.0+)
 - `make` - Sistema de build
 - `ncurses` - Biblioteca para interface TUI
@@ -81,6 +82,7 @@ cat /sys/fs/cgroup/cgroup.controllers
 ```
 
 Este script:
+
 1. Compila todo o código fonte
 2. Cria diretórios de saída
 3. Executa automaticamente o menu interativo
@@ -99,6 +101,7 @@ make clean
 ```
 
 **Saída da compilação:**
+
 - `bin/monitor` - Binário principal (todas as funcionalidades)
 - `bin/cgroup_manager` - Utilitário de gerenciamento de cgroups
 - `obj/*.o` - Arquivos objeto intermediários
@@ -122,6 +125,7 @@ ls -lh bin/
 ```
 
 Menu principal oferece:
+
 1. **Resource Monitor** - TUI em tempo real
 2. **Namespace Analyzer** - análise de isolamento
 3. **Control Group Manager** - gerenciamento de cgroups
@@ -355,23 +359,23 @@ resource-monitor/
 
 ## 📊 Componentes Principais
 
-| Componente | Arquivos | Descrição |
-|-----------|----------|-----------|
-| **Core do Monitor** | `src/main.c`, `src/monitor_tui.c` | Menu interativo, interface TUI, loop de monitoramento |
-| **Coleta de Métricas** | `src/cpu_monitor.c`, `src/memory_monitor.c`, `src/io_monitor.c`, `src/network_monitor.c` | Leitura de dados do /proc e cálculos de uso |
-| **Namespace Analyzer** | `src/namespace_analyzer.c` | Análise, comparação e relatórios de namespaces |
-| **Cgroup Manager** | `src/cgroup_v2.c`, `src/cgroup_manager.c` | Gerenciamento de cgroups v2, aplicação de limites |
-| **Experimento 1** | `src/experiment_overhead.c` | Medição de overhead de monitoramento |
-| **Experimento 2** | `src/experiments.c` (namespace) | Validação de isolamento via namespaces |
-| **Experimento 3** | `src/experiment_cpu_throttling.c` | Demonstração de CPU throttling |
-| **Experimento 4** | `src/experiment_memory_limit.c` | Demonstração de limites de memória |
-| **Experimento 5** | `src/experiment_io_limit.c` | Demonstração de limites de I/O |
-| **Visualização** | `scripts/visualize.py` | Geração de gráficos com matplotlib |
-| **Utilitários** | `src/utils.c`, `src/process_monitor.c` | Funções auxiliares e exportação de dados |
+| Componente             | Arquivos                                                                                 | Descrição                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Core do Monitor**    | `src/main.c`, `src/monitor_tui.c`                                                        | Menu interativo, interface TUI, loop de monitoramento |
+| **Coleta de Métricas** | `src/cpu_monitor.c`, `src/memory_monitor.c`, `src/io_monitor.c`, `src/network_monitor.c` | Leitura de dados do /proc e cálculos de uso           |
+| **Namespace Analyzer** | `src/namespace_analyzer.c`                                                               | Análise, comparação e relatórios de namespaces        |
+| **Cgroup Manager**     | `src/cgroup_v2.c`, `src/cgroup_manager.c`                                                | Gerenciamento de cgroups v2, aplicação de limites     |
+| **Experimento 1**      | `src/experiment_overhead.c`                                                              | Medição de overhead de monitoramento                  |
+| **Experimento 2**      | `src/experiments.c` (namespace)                                                          | Validação de isolamento via namespaces                |
+| **Experimento 3**      | `src/experiment_cpu_throttling.c`                                                        | Demonstração de CPU throttling                        |
+| **Experimento 4**      | `src/experiment_memory_limit.c`                                                          | Demonstração de limites de memória                    |
+| **Experimento 5**      | `src/experiment_io_limit.c`                                                              | Demonstração de limites de I/O                        |
+| **Visualização**       | `scripts/visualize.py`                                                                   | Geração de gráficos com matplotlib                    |
+| **Utilitários**        | `src/utils.c`, `src/process_monitor.c`                                                   | Funções auxiliares e exportação de dados              |
 
 ## 👥 Autor
 
-Leandro Casiragh - Grupo 9
+Leandro Casiragh - Grupo 5
 
 Este projeto foi desenvolvido individualmente como trabalho RA3 da disciplina de Sistemas Operacionais.
 
