@@ -7,9 +7,9 @@
 #include <time.h>
 #include "../include/resource_profiler.h"
 
-/* Simple resource profiler: reads /proc/<pid>/stat and calculates CPU% using /proc/stat.
- * Outputs CSV with timestamp, pid, utime, stime, cpu_percent, vsize, rss.
- * This is a minimal, portable-to-Linux implementation for the assignment.
+/* Resource profiler: reads /proc/<pid> to collect CPU, memory, IO and network metrics.
+ * Calculates CPU% using /proc/stat and per-interval IO rates using /proc/<pid>/io.
+ * Emits CSV by default or JSON if output file ends with .json.
  */
 
 typedef struct {
@@ -17,6 +17,12 @@ typedef struct {
     unsigned long stime;
     unsigned long vsize;
     long rss;
+    unsigned long minflt;
+    unsigned long majflt;
+    int threads;
+    unsigned long vm_swap_kb;
+    unsigned long ctx_voluntary;
+    unsigned long ctx_nonvoluntary;
 } proc_stat_t;
 
 typedef struct {
@@ -48,43 +54,63 @@ static int read_proc_stat(pid_t pid, proc_stat_t *stat) {
     char buf[4096];
     if (!fgets(buf, sizeof(buf), f)) { fclose(f); return -1; }
     fclose(f);
-    
-    /* Parse: find closing ) of comm, then extract fields */
-    char *p = buf;
-    char *token = strchr(p, ')');
-    if (!token) return -1;
-    p = token + 2; /* skip ") " */
-    
-    unsigned long _utime=0, _stime=0, _vsize=0; long _rss=0;
-    int matched = sscanf(p,
-        "%*c %*d %*d %*d %*d %*u %*u %*u %*u %*u %*u %*u %lu %lu %*d %*d %*d %*d %*d %*u %lu %ld",
-        &_utime, &_stime, &_vsize, &_rss);
-    
-    if (matched < 4) {
-        /* Fallback: token-by-token parsing */
-        char *save = strdup(p);
-        if (!save) return -1;
-        char *tok = strtok(save, " ");
-        unsigned long fields[30];
-        int fi = 0;
-        while (tok && fi < 30) {
-            fields[fi++] = strtoul(tok, NULL, 10);
-            tok = strtok(NULL, " ");
+    /* Parse after comm ) token into array of fields */
+    char *p = strchr(buf, ')');
+    if (!p) return -1;
+    p += 2; /* skip ") " */
+    /* Collect up to 64 numeric fields */
+    unsigned long fields[64];
+    int fi = 0;
+    char *q = p;
+    while (*q && fi < 64) {
+        char *end;
+        unsigned long v = strtoul(q, &end, 10);
+        if (end == q) {
+            /* skip token (state char etc.) */
+            q++;
+            continue;
         }
-        free(save);
-        if (fi >= 24) {
-            _utime = fields[11];  /* utime relative index in parsed fields */
-            _stime = fields[12];  /* stime */
-            _vsize = fields[20];  /* vsize */
-            _rss = (long)fields[21]; /* rss */
-        } else {
-            return -1;
-        }
+        fields[fi++] = v;
+        q = end;
     }
-    stat->utime = _utime;
-    stat->stime = _stime;
-    stat->vsize = _vsize;
-    stat->rss = _rss;
+    if (fi < 24) return -1;
+    /* Map according to proc(5) after comm/state: indexes offset may vary due to non-numeric state */
+    /* To be robust, we re-tokenize using sscanf for mixed tokens */
+    /* Minimal set: minflt(8), majflt(10), utime(13), stime(14), vsize(23), rss(24) using 1-based indexing after pid/comm/state */
+    /* Use a safer tokenizer: */
+    unsigned long minflt=0, majflt=0, utime=0, stime=0, vsize=0; long rss=0;
+    int scanned = sscanf(p,
+        "%*d %*d %*d %*d %*u %*u %*u %lu %*u %lu %*u %lu %lu %*d %*d %*d %*d %*d %*u %lu %ld",
+        &minflt, &majflt, &utime, &stime, &vsize, &rss);
+    if (scanned < 6) {
+        /* Fallback to array positions (best-effort) */
+        minflt = fields[7];
+        majflt = fields[9];
+        utime = fields[12];
+        stime = fields[13];
+        vsize = fields[22];
+        rss = (long)fields[23];
+    }
+    stat->minflt = minflt;
+    stat->majflt = majflt;
+    stat->utime = utime;
+    stat->stime = stime;
+    stat->vsize = vsize;
+    stat->rss = rss;
+    /* Read extra info from /proc/<pid>/status */
+    char spath[256];
+    snprintf(spath, sizeof(spath), "/proc/%d/status", (int)pid);
+    FILE *sf = fopen(spath, "r");
+    if (sf) {
+        char line[256];
+        while (fgets(line, sizeof(line), sf)) {
+            if (sscanf(line, "Threads: %d", &stat->threads) == 1) continue;
+            if (sscanf(line, "voluntary_ctxt_switches: %lu", &stat->ctx_voluntary) == 1) continue;
+            if (sscanf(line, "nonvoluntary_ctxt_switches: %lu", &stat->ctx_nonvoluntary) == 1) continue;
+            if (sscanf(line, "VmSwap: %lu", &stat->vm_swap_kb) == 1) continue;
+        }
+        fclose(sf);
+    }
     return 0;
 }
 
@@ -114,13 +140,52 @@ int rp_run(pid_t pid, int interval_ms, int samples, const char *outpath) {
             return -1;
         }
     }
-    
-    /* CSV header */
-    fprintf(out, "timestamp_ms,pid,utime_ticks,stime_ticks,cpu_percent,vsize_bytes,rss_pages\n");
+    int emit_json = 0;
+    if (outpath) {
+        const char *dot = strrchr(outpath, '.');
+        if (dot && strcmp(dot, ".json") == 0) emit_json = 1;
+    }
+    /* Headers */
+    if (emit_json) {
+        fprintf(out, "[\n");
+    } else {
+        fprintf(out, "timestamp_ms,pid,utime_ticks,stime_ticks,cpu_percent,vsize_bytes,rss_pages,threads,minflt,majflt,vm_swap_kb,ctx_voluntary,ctx_nonvoluntary,io_rchar,io_wchar,io_read_bytes,io_write_bytes,io_read_bps,io_write_bps,net_tcp_conns,net_udp_conns\n");
+    }
     
     proc_stat_t prev_proc = {0}, curr_proc = {0};
     cpu_stat_t prev_cpu = {0}, curr_cpu = {0};
+    /* IO cumulative values for deltas */
+    unsigned long long prev_rchar=0, prev_wchar=0, prev_read_bytes=0, prev_write_bytes=0;
     int first = 1;
+    /* Small helpers */
+    auto read_proc_io = [&](pid_t p, unsigned long long *rchar, unsigned long long *wchar,
+                             unsigned long long *read_bytes, unsigned long long *write_bytes) {
+        char ipath[256];
+        snprintf(ipath, sizeof(ipath), "/proc/%d/io", (int)p);
+        FILE *iof = fopen(ipath, "r");
+        if (!iof) return -1;
+        char line[256];
+        while (fgets(line, sizeof(line), iof)) {
+            sscanf(line, "rchar: %llu", rchar);
+            sscanf(line, "wchar: %llu", wchar);
+            sscanf(line, "read_bytes: %llu", read_bytes);
+            sscanf(line, "write_bytes: %llu", write_bytes);
+        }
+        fclose(iof);
+        return 0;
+    };
+    auto count_net_conns = [&](pid_t p, const char *proto) {
+        char npath[256];
+        snprintf(npath, sizeof(npath), "/proc/%d/net/%s", (int)p, proto);
+        FILE *nf = fopen(npath, "r");
+        if (!nf) return 0;
+        char line[512];
+        int lines = 0;
+        while (fgets(line, sizeof(line), nf)) lines++;
+        fclose(nf);
+        /* skip header line if present */
+        return (lines > 0) ? (lines - 1) : 0;
+    };
     
     for (int i = 0; i < samples; ++i) {
         /* Read current system and process stats */
@@ -146,9 +211,33 @@ int rp_run(pid_t pid, int interval_ms, int samples, const char *outpath) {
             cpu_pct = calc_cpu_percent(&prev_proc, &curr_proc, &prev_cpu, &curr_cpu);
         }
         
-        /* Write CSV row */
-        fprintf(out, "%lld,%d,%lu,%lu,%.2f,%lu,%ld\n",
-                ms, (int)pid, curr_proc.utime, curr_proc.stime, cpu_pct, curr_proc.vsize, curr_proc.rss);
+        /* IO counters */
+        unsigned long long rchar=0, wchar=0, read_bytes=0, write_bytes=0;
+        (void)read_proc_io(pid, &rchar, &wchar, &read_bytes, &write_bytes);
+        double interval_s = (double)interval_ms / 1000.0;
+        double read_bps = (!first && interval_s > 0) ? (read_bytes - prev_read_bytes) / interval_s : 0.0;
+        double write_bps = (!first && interval_s > 0) ? (write_bytes - prev_write_bytes) / interval_s : 0.0;
+        prev_rchar = rchar; prev_wchar = wchar; prev_read_bytes = read_bytes; prev_write_bytes = write_bytes;
+
+        /* Net connections */
+        int tcp_conns = count_net_conns(pid, "tcp") + count_net_conns(pid, "tcp6");
+        int udp_conns = count_net_conns(pid, "udp") + count_net_conns(pid, "udp6");
+
+        if (emit_json) {
+            fprintf(out,
+            "  {\"timestamp_ms\": %lld, \"pid\": %d, \"utime_ticks\": %lu, \"stime_ticks\": %lu, \"cpu_percent\": %.2f, \"vsize_bytes\": %lu, \"rss_pages\": %ld, \"threads\": %d, \"minflt\": %lu, \"majflt\": %lu, \"vm_swap_kb\": %lu, \"ctx_voluntary\": %lu, \"ctx_nonvoluntary\": %lu, \"io_rchar\": %llu, \"io_wchar\": %llu, \"io_read_bytes\": %llu, \"io_write_bytes\": %llu, \"io_read_bps\": %.2f, \"io_write_bps\": %.2f, \"net_tcp_conns\": %d, \"net_udp_conns\": %d }%s\n",
+            ms, (int)pid, curr_proc.utime, curr_proc.stime, cpu_pct, curr_proc.vsize, curr_proc.rss,
+            curr_proc.threads, curr_proc.minflt, curr_proc.majflt, curr_proc.vm_swap_kb,
+            curr_proc.ctx_voluntary, curr_proc.ctx_nonvoluntary,
+            rchar, wchar, read_bytes, write_bytes, read_bps, write_bps, tcp_conns, udp_conns,
+            (i + 1 < samples) ? "," : "");
+        } else {
+            fprintf(out, "%lld,%d,%lu,%lu,%.2f,%lu,%ld,%d,%lu,%lu,%lu,%lu,%lu,%llu,%llu,%llu,%llu,%.0f,%.0f,%d,%d\n",
+            ms, (int)pid, curr_proc.utime, curr_proc.stime, cpu_pct, curr_proc.vsize, curr_proc.rss,
+            curr_proc.threads, curr_proc.minflt, curr_proc.majflt, curr_proc.vm_swap_kb,
+            curr_proc.ctx_voluntary, curr_proc.ctx_nonvoluntary,
+            rchar, wchar, read_bytes, write_bytes, read_bps, write_bps, tcp_conns, udp_conns);
+        }
         fflush(out);
         
         /* Save for next iteration */
@@ -160,7 +249,7 @@ int rp_run(pid_t pid, int interval_ms, int samples, const char *outpath) {
             usleep((useconds_t)interval_ms * 1000);
         }
     }
-    
+    if (emit_json) fprintf(out, "]\n");
     if (outpath) fclose(out);
     return 0;
 }
