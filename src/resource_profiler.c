@@ -33,6 +33,38 @@ typedef struct {
     unsigned long iowait;
 } cpu_stat_t;
 
+/* Helpers (C, not lambdas) */
+static int read_proc_io_fn(pid_t p, unsigned long long *rchar,
+                           unsigned long long *wchar,
+                           unsigned long long *read_bytes,
+                           unsigned long long *write_bytes) {
+    char ipath[256];
+    snprintf(ipath, sizeof(ipath), "/proc/%d/io", (int)p);
+    FILE *iof = fopen(ipath, "r");
+    if (!iof) return -1;
+    char line[256];
+    while (fgets(line, sizeof(line), iof)) {
+        (void)sscanf(line, "rchar: %llu", rchar);
+        (void)sscanf(line, "wchar: %llu", wchar);
+        (void)sscanf(line, "read_bytes: %llu", read_bytes);
+        (void)sscanf(line, "write_bytes: %llu", write_bytes);
+    }
+    fclose(iof);
+    return 0;
+}
+
+static int count_net_conns_fn(pid_t p, const char *proto) {
+    char npath[256];
+    snprintf(npath, sizeof(npath), "/proc/%d/net/%s", (int)p, proto);
+    FILE *nf = fopen(npath, "r");
+    if (!nf) return 0;
+    char line[512];
+    int lines = 0;
+    while (fgets(line, sizeof(line), nf)) lines++;
+    fclose(nf);
+    return (lines > 0) ? (lines - 1) : 0;
+}
+
 /* Read CPU jiffies from /proc/stat (first line) */
 static int read_cpu_stat(cpu_stat_t *stat) {
     FILE *f = fopen("/proc/stat", "r");
@@ -155,37 +187,9 @@ int rp_run(pid_t pid, int interval_ms, int samples, const char *outpath) {
     proc_stat_t prev_proc = {0}, curr_proc = {0};
     cpu_stat_t prev_cpu = {0}, curr_cpu = {0};
     /* IO cumulative values for deltas */
-    unsigned long long prev_rchar=0, prev_wchar=0, prev_read_bytes=0, prev_write_bytes=0;
+    unsigned long long prev_read_bytes=0, prev_write_bytes=0;
     int first = 1;
-    /* Small helpers */
-    auto read_proc_io = [&](pid_t p, unsigned long long *rchar, unsigned long long *wchar,
-                             unsigned long long *read_bytes, unsigned long long *write_bytes) {
-        char ipath[256];
-        snprintf(ipath, sizeof(ipath), "/proc/%d/io", (int)p);
-        FILE *iof = fopen(ipath, "r");
-        if (!iof) return -1;
-        char line[256];
-        while (fgets(line, sizeof(line), iof)) {
-            sscanf(line, "rchar: %llu", rchar);
-            sscanf(line, "wchar: %llu", wchar);
-            sscanf(line, "read_bytes: %llu", read_bytes);
-            sscanf(line, "write_bytes: %llu", write_bytes);
-        }
-        fclose(iof);
-        return 0;
-    };
-    auto count_net_conns = [&](pid_t p, const char *proto) {
-        char npath[256];
-        snprintf(npath, sizeof(npath), "/proc/%d/net/%s", (int)p, proto);
-        FILE *nf = fopen(npath, "r");
-        if (!nf) return 0;
-        char line[512];
-        int lines = 0;
-        while (fgets(line, sizeof(line), nf)) lines++;
-        fclose(nf);
-        /* skip header line if present */
-        return (lines > 0) ? (lines - 1) : 0;
-    };
+    /* Small helpers moved to C static functions above */
     
     for (int i = 0; i < samples; ++i) {
         /* Read current system and process stats */
@@ -213,15 +217,15 @@ int rp_run(pid_t pid, int interval_ms, int samples, const char *outpath) {
         
         /* IO counters */
         unsigned long long rchar=0, wchar=0, read_bytes=0, write_bytes=0;
-        (void)read_proc_io(pid, &rchar, &wchar, &read_bytes, &write_bytes);
+        (void)read_proc_io_fn(pid, &rchar, &wchar, &read_bytes, &write_bytes);
         double interval_s = (double)interval_ms / 1000.0;
         double read_bps = (!first && interval_s > 0) ? (read_bytes - prev_read_bytes) / interval_s : 0.0;
         double write_bps = (!first && interval_s > 0) ? (write_bytes - prev_write_bytes) / interval_s : 0.0;
-        prev_rchar = rchar; prev_wchar = wchar; prev_read_bytes = read_bytes; prev_write_bytes = write_bytes;
+        prev_read_bytes = read_bytes; prev_write_bytes = write_bytes;
 
         /* Net connections */
-        int tcp_conns = count_net_conns(pid, "tcp") + count_net_conns(pid, "tcp6");
-        int udp_conns = count_net_conns(pid, "udp") + count_net_conns(pid, "udp6");
+        int tcp_conns = count_net_conns_fn(pid, "tcp") + count_net_conns_fn(pid, "tcp6");
+        int udp_conns = count_net_conns_fn(pid, "udp") + count_net_conns_fn(pid, "udp6");
 
         if (emit_json) {
             fprintf(out,
