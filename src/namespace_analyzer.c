@@ -9,9 +9,13 @@
 #include <time.h>
 #include <sched.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include "../include/namespace.h"
 
 static const char *ns_types[] = {"mnt","pid","net","ipc","uts","user","cgroup", NULL};
+
+/* child function for clone() must be at file scope in C */
+static int ns_child(void *arg) { (void)arg; _exit(0); }
 
 static int read_ns_link(pid_t pid, const char *ns_type, char *out, size_t outlen) {
     char path[256];
@@ -126,8 +130,6 @@ int namespace_creation_overhead(const char *ns_type, int iterations) {
     else if (strcmp(ns_type, "cgroup") == 0) flag = 0; /* v2 not namespaced via clone */
     else { fprintf(stderr, "Unknown ns_type: %s\n", ns_type); return 1; }
 
-    /* Simple function to run in child */
-    static int child(void *arg) { (void)arg; _exit(0); }
     const size_t STACK_SIZE = 1024*1024;
     char *stack = malloc(STACK_SIZE);
     if (!stack) { perror("malloc"); return 1; }
@@ -137,7 +139,7 @@ int namespace_creation_overhead(const char *ns_type, int iterations) {
     double total_ms = 0.0; int ok = 0;
     for (int i = 0; i < iterations; ++i) {
         clock_gettime(CLOCK_MONOTONIC, &t0);
-        pid_t pid = clone(child, top, flag | SIGCHLD, NULL);
+        pid_t pid = clone(ns_child, top, flag | SIGCHLD, NULL);
         clock_gettime(CLOCK_MONOTONIC, &t1);
         if (pid < 0) {
             perror("clone");

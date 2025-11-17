@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <ncurses.h>
+#include "../include/resource_profiler.h"
 
 /* Cores */
 #define COLOR_TITLE 1
@@ -67,16 +68,21 @@ void show_monitor_menu() {
         return;
     }
     
+    /* Executa o resource profiler de verdade (5 amostras x 1s) */
     mvprintw(8, 2, "Monitorando PID %d por 5 segundos...", pid);
     refresh();
-    
-    for (int i = 0; i < 5; i++) {
-        mvprintw(10 + i, 2, "  [%d/5] %d%%", i + 1, (i + 1) * 20);
-        refresh();
-        sleep(1);
+
+    mkdir("output", 0755);
+    char outpath[128];
+    snprintf(outpath, sizeof(outpath), "output/monitor.csv");
+    int rc = rp_run(pid, 1000, 5, outpath);
+    if (rc == 0) {
+        mvprintw(10, 2, "[OK] Coleta concluída");
+        mvprintw(12, 2, "Dados salvos em: %s", outpath);
+    } else {
+        mvprintw(10, 2, "[ERRO] Falha ao coletar métricas para PID %d", pid);
+        mvprintw(12, 2, "Verifique permissões e se o processo existe.");
     }
-    
-    mvprintw(16, 2, "Dados salvos em: output/monitor.csv");
     mvprintw(18, 2, "Pressione qualquer tecla para voltar...");
     refresh();
     getch();
