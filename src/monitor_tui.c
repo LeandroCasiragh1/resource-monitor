@@ -112,7 +112,7 @@ static void show_namespace_menu() {
         for (int i=0;i<n;i++) {
             if (i==sel) { attron(COLOR_PAIR(COLOR_SELECTED)|A_BOLD); mvprintw(3+i,4,"> %d) %s", i+1, items[i]); attroff(COLOR_PAIR(COLOR_SELECTED)|A_BOLD);} else { mvprintw(3+i,4,"  %d) %s", i+1, items[i]); }
         }
-        mvprintw(12,2,"↑↓ navega, ENTER seleciona, Q sai");
+        mvprintw(12,2,"SETINHA navega, ENTER seleciona, Q sai");
         refresh();
         ch = getch();
         if (ch=='q'||ch=='Q') break;
@@ -120,14 +120,79 @@ static void show_namespace_menu() {
             if (sel==n-1) break;
             clear();
             if (sel==0) { /* listar */
-                echo(); curs_set(1); char buf[32]; mvprintw(2,2,"PID: "); getstr(buf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(buf); end_ncurses(); namespace_list_for_pid(p); init_ncurses();
+                echo(); curs_set(1);
+                char buf[32];
+                mvprintw(2,2,"PID: ");
+                getstr(buf);
+                noecho(); curs_set(0);
+                pid_t p=(pid_t)atoi(buf);
+                if (p <= 0) { mvprintw(5,2,"PID inválido!"); refresh(); getch(); }
+                else {
+                    end_ncurses();
+                    namespace_list_for_pid(p);
+                    printf("\nPressione ENTER..."); fflush(stdout);
+                    getchar();
+                    init_ncurses();
+                }
             } else if (sel==1) { /* comparar */
-                echo(); curs_set(1); char a[32], b[32]; mvprintw(2,2,"PID1: "); getstr(a); mvprintw(3,2,"PID2: "); getstr(b); noecho(); curs_set(0); pid_t p1=(pid_t)atoi(a), p2=(pid_t)atoi(b); end_ncurses(); namespace_compare(p1,p2); init_ncurses();
+                echo(); curs_set(1);
+                char a[32], b[32];
+                mvprintw(2,2,"PID1: "); getstr(a);
+                mvprintw(3,2,"PID2: "); getstr(b);
+                noecho(); curs_set(0);
+                pid_t p1=(pid_t)atoi(a), p2=(pid_t)atoi(b);
+                if (p1 <= 0 || p2 <= 0) { mvprintw(5,2,"PIDs inválidos!"); refresh(); getch(); }
+                else {
+                    end_ncurses();
+                    namespace_compare(p1,p2);
+                    printf("\nPressione ENTER..."); fflush(stdout);
+                    getchar();
+                    init_ncurses();
+                }
             } else if (sel==2) { /* mapear */
-                echo(); curs_set(1); char t[32]; mvprintw(2,2,"Tipo (pid/net/mnt/uts/ipc/user/cgroup): "); getstr(t); noecho(); curs_set(0); end_ncurses(); namespace_map_by_type(t); init_ncurses();
+                echo(); curs_set(1);
+                char t[32];
+                mvprintw(2,2,"Tipo (pid/net/mnt/uts/ipc/user/cgroup): ");
+                getstr(t);
+                noecho(); curs_set(0);
+                /* normalizar minúsculas */
+                for (char *c=t; *c; ++c) { if (*c>='A' && *c<='Z') *c = (char)(*c - 'A' + 'a'); }
+                if (strcmp(t,"mount")==0) strcpy(t,"mnt");
+                const char *valid[] = {"pid","net","mnt","uts","ipc","user","cgroup",NULL};
+                int ok=0; for (int i=0; valid[i]; ++i) if (strcmp(t,valid[i])==0) { ok=1; break; }
+                if (!ok) { mvprintw(5,2,"Tipo inválido!"); refresh(); getch(); }
+                else {
+                    end_ncurses();
+                    namespace_map_by_type(t);
+                    printf("\nPressione ENTER..."); fflush(stdout);
+                    getchar();
+                    init_ncurses();
+                }
             } else if (sel==3) { /* overhead */
-                echo(); curs_set(1); char t[32], it[32]; mvprintw(2,2,"Tipo: "); getstr(t); mvprintw(3,2,"Iterações: "); getstr(it); noecho(); curs_set(0); int iterations=atoi(it); end_ncurses(); namespace_creation_overhead(t, iterations); init_ncurses();
-            } else if (sel==4) { end_ncurses(); namespace_system_report(); init_ncurses(); }
+                echo(); curs_set(1);
+                char t[32], it[32];
+                mvprintw(2,2,"Tipo: "); getstr(t);
+                mvprintw(3,2,"Iterações: "); getstr(it);
+                noecho(); curs_set(0);
+                for (char *c=t; *c; ++c) { if (*c>='A' && *c<='Z') *c = (char)(*c - 'A' + 'a'); }
+                if (strcmp(t,"mount")==0) strcpy(t,"mnt");
+                int iterations=atoi(it); if (iterations <= 0) iterations = 10;
+                const char *valid2[] = {"pid","net","mnt","uts","ipc","user","cgroup",NULL};
+                int ok2=0; for (int i=0; valid2[i]; ++i) if (strcmp(t,valid2[i])==0) { ok2=1; break; }
+                if (!ok2) { mvprintw(5,2,"Tipo inválido!"); refresh(); getch(); }
+                else {
+                    end_ncurses();
+                    namespace_creation_overhead(t, iterations);
+                    printf("\nPressione ENTER..."); fflush(stdout);
+                    getchar();
+                    init_ncurses();
+                }
+            } else if (sel==4) {
+                end_ncurses(); namespace_system_report();
+                printf("\nPressione ENTER..."); fflush(stdout);
+                getchar();
+                init_ncurses();
+            }
             mvprintw(10,2,"(Saída acima gerada fora do ncurses)"); mvprintw(11,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
         } else if (ch>='1'&&ch<='6') { sel=ch-'1'; }
     }
@@ -147,7 +212,7 @@ static void show_cgroup_menu() {
     while (1) {
         clear(); attron(COLOR_PAIR(COLOR_TITLE)|A_BOLD); mvprintw(1,2,"[+] Cgroup Manager"); attroff(COLOR_PAIR(COLOR_TITLE)|A_BOLD);
         for (int i=0;i<n;i++){ if(i==sel){attron(COLOR_PAIR(COLOR_SELECTED)|A_BOLD); mvprintw(3+i,4,"> %d) %s", i+1, items[i]); attroff(COLOR_PAIR(COLOR_SELECTED)|A_BOLD);} else mvprintw(3+i,4,"  %d) %s", i+1, items[i]); }
-        mvprintw(11,2,"↑↓ navega | ENTER seleciona | Q sai"); refresh(); ch=getch();
+        mvprintw(11,2,"SETINHA navega | ENTER seleciona | Q sai"); refresh(); ch=getch();
         if (ch=='q'||ch=='Q') break; if(ch==KEY_UP) sel=(sel-1+n)%n; else if(ch==KEY_DOWN) sel=(sel+1)%n; else if(ch=='\n') {
             if (sel==n-1) break; clear();
             if (sel==0){ echo(); curs_set(1); char name[64]; mvprintw(2,2,"Nome: "); getstr(name); noecho(); curs_set(0); end_ncurses(); int r=cgroup_create(name); printf("create(%s) => %d\n", name,r); init_ncurses(); }
