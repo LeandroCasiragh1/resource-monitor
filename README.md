@@ -1,400 +1,329 @@
-# 🐧 Resource Monitor - Containers e Recursos
+# Resource Monitor
 
-> **Monitoramento de recursos Linux com suporte a namespaces, cgroups e experimentos de isolamento**
+Sistema completo de monitoramento de recursos do sistema com suporte a cgroups v2, namespaces e experimentos de controle de recursos.
 
-Este projeto implementa um profiler de recursos de sistema em C que permite estudar os mecanismos fundamentais de containers Linux.
+## Funcionalidades
 
-## 📖 Descrição do Projeto
+### Monitoramento em Tempo Real
+- **CPU**: Uso percentual, tempo de usuário/sistema, idle
+- **Memória**: Total, usado, disponível, cache, buffers, swap
+- **I/O**: Leituras/escritas por segundo, operações completadas
+- **Rede**: Taxa de RX/TX, pacotes, erros
 
-Sistema completo de monitoramento de processos Linux que demonstra na prática:
+### Controle de Recursos com Cgroups v2
+- Limitação de CPU (quota/period e weight)
+- Limitação de memória (max, high watermark)
+- Limitação de I/O (read/write bps)
+- Estatísticas de uso por cgroup
 
-- **Monitoramento em tempo real** de processos (CPU, memória, I/O, rede)
-- **Análise de namespaces** para validação de isolamento entre processos
-- **Gerenciamento de cgroups v2** para limitação e controle de recursos
-- **Cinco experimentos práticos** demonstrando conceitos de containerização
-- **Interface TUI** com visualização gráfica de métricas em tempo real
-- **Visualizações gráficas** geradas automaticamente com matplotlib
+### Isolamento com Namespaces
+- PID: Isolamento de processos
+- NET: Stack de rede isolada
+- MNT: Pontos de montagem isolados
+- UTS: Hostname isolado
+- IPC: Inter-process communication isolado
+- USER: Mapeamento de usuários
 
-Desenvolvido como trabalho acadêmico (RA3) para a disciplina de Sistemas Operacionais.
+### Experimentos
+1. **Overhead de Monitoramento**: Mede o impacto do monitoramento no desempenho
+2. **CPU Throttling**: Testa limitação de CPU com cgroups
+3. **Memory Limit**: Testa comportamento sob pressão de memória
+4. **I/O Limit**: Testa limitação de I/O em disco
+5. **Namespace Isolation**: Verifica isolamento de namespaces
 
-## 🔧 Requisitos e Dependências
+### Visualização
+- Gráficos automáticos com Python/Matplotlib
+- Exportação em CSV para análise
+- Gráficos salvos como PNG de alta resolução
 
-### Requisitos de Sistema
+## Requisitos
 
-- **Sistema Operacional**: Linux (kernel 4.5+)
-- **Arquitetura**: x86_64
-- **Cgroups v2**: Habilitado no kernel
-- **Privilégios**: Root necessário para experimentos 2-5 e gerenciamento de cgroups
+### Sistema Operacional
+- Linux kernel 4.5+ (para cgroups v2 completo)
+- Ubuntu 20.04+ / Debian 11+ / Fedora 31+ recomendado
 
-### Dependências Obrigatórias
-
+### Build
 ```bash
-# Ubuntu/Debian
-sudo apt-get install gcc make libncurses-dev util-linux iproute2 coreutils
-
-# Fedora/RHEL
-sudo dnf install gcc make ncurses-devel util-linux iproute coreutils
-
-# Arch Linux
-sudo pacman -S gcc make ncurses util-linux iproute2 coreutils
+sudo apt-get install build-essential libncurses-dev pkg-config
 ```
 
-**Pacotes necessários:**
-- `gcc` - Compilador C (GCC 9.0+)
-- `make` - Sistema de build
-- `ncurses` - Biblioteca para interface TUI
-- `util-linux` - Ferramentas (unshare, nsenter)
-- `iproute2` - Ferramentas de rede (ip)
-- `coreutils` - Utilitários GNU (dd, cat, etc.)
-
-### Dependências Opcionais (Visualização)
-
-Para gerar gráficos automaticamente:
-
+### Visualização (opcional)
 ```bash
-# Criar ambiente virtual Python
-python3 -m venv venv
-source venv/bin/activate
-
-# Instalar dependências Python
-pip install matplotlib numpy
+pip3 install -r requirements.txt
+# ou
+pip3 install pandas matplotlib numpy
 ```
 
-### Verificar Suporte a Cgroups v2
+### Permissões
+- Root ou sudo para operações com cgroups
+- Permissões de leitura em /proc e /sys/fs/cgroup
 
-```bash
-# Verificar se cgroups v2 está montado
-mount | grep cgroup2
-# Saída esperada: cgroup2 on /sys/fs/cgroup type cgroup2 (rw,...)
+## Instalação
 
-# Verificar controllers disponíveis
-cat /sys/fs/cgroup/cgroup.controllers
-# Saída esperada: cpu memory io pids ...
-```
-
-## 🛠️ Instruções de Compilação
-
-### Método 1: Build Rápido (Recomendado)
-
+### Compilação Rápida
 ```bash
 ./build.sh
 ```
 
-Este script:
-1. Compila todo o código fonte
-2. Cria diretórios de saída
-3. Executa automaticamente o menu interativo
-
-### Método 2: Build Manual
-
+### Compilação Manual
 ```bash
-# Compilação limpa
-make clean && make
-
-# Apenas compilar (sem limpar)
-make
-
-# Limpar arquivos de build
 make clean
+make
 ```
 
-**Saída da compilação:**
-- `bin/monitor` - Binário principal (todas as funcionalidades)
-- `bin/cgroup_manager` - Utilitário de gerenciamento de cgroups
-- `obj/*.o` - Arquivos objeto intermediários
-
-### Verificar Compilação
-
+### Instalação no Sistema
 ```bash
-# Verificar binários criados
-ls -lh bin/
-
-# Testar execução
-./bin/monitor --help
+sudo make install
 ```
 
-## 📚 Instruções de Uso
+## Uso
 
-### Menu Interativo (Modo Recomendado)
-
+### Menu Interativo (TUI)
 ```bash
 ./bin/monitor menu
 ```
 
-Menu principal oferece:
-1. **Resource Monitor** - TUI em tempo real
-2. **Namespace Analyzer** - análise de isolamento
-3. **Control Group Manager** - gerenciamento de cgroups
-4. **Experimentos** - 1-5 + geração de visualizações
+Navegação:
+- Setas UP/DOWN: Navegar entre opções
+- Números 1-5: Selecionar diretamente
+- ENTER: Confirmar seleção
+- Q: Sair
 
-### Modo Linha de Comando
-
-#### Monitoramento de Processos
-
+### Monitoramento de CPU
 ```bash
-# TUI - Interface em tempo real (pressione 'q' para sair)
-./bin/monitor tui <PID>
-
-# Exemplo: monitorar processo 1234
-./bin/monitor tui 1234
-
-# TUI com tempo determinado (5s de intervalo por 60s)
-./bin/monitor tui 1234 5 60
-
-# Monitoramento com exportação JSON
-./bin/monitor process 1234 5 60 json
-
-# Monitoramento com exportação CSV
-./bin/monitor process 1234 5 60 csv
+# Menu interativo: Opção 1 > CPU Monitor
+# Ou via linha de comando:
+./bin/monitor cpu 60  # 60 segundos
 ```
+Gera: `output/cpu_monitor.csv`
 
-**Exemplo prático - Monitorar navegador:**
-
+### Monitoramento de Memória
 ```bash
-# Encontrar PID do Firefox
-pgrep firefox
-
-# Monitorar em tempo real
-./bin/monitor tui $(pgrep firefox | head -1)
+# Menu interativo: Opção 1 > Memory Monitor
+./bin/monitor memory 60
 ```
+Gera: `output/memory_monitor.csv`
 
-#### Análise de Namespaces
-
+### Monitoramento de I/O
 ```bash
-# Listar namespaces de um processo
-./bin/monitor namespace list <PID>
-
-# Comparar namespaces entre dois processos
-./bin/monitor namespace compare <PID1> <PID2>
-
-# Encontrar processos em um namespace específico
-./bin/monitor namespace find /proc/1/ns/pid
-
-# Gerar relatório completo do sistema
-./bin/monitor namespace report
-
-# Medir overhead de criação de namespaces
-./bin/monitor namespace overhead
+# Menu interativo: Opção 1 > I/O Monitor
+./bin/monitor io sda 60  # Monitorar device sda por 60s
 ```
+Gera: `output/io_monitor.csv`
 
-**Exemplo prático:**
-
+### Monitoramento de Rede
 ```bash
-# Comparar processo normal com processo em container
-./bin/monitor namespace compare 1 $(pgrep dockerd)
+# Menu interativo: Opção 1 > Network Monitor
+./bin/monitor network eth0 60  # Interface eth0 por 60s
 ```
+Gera: `output/network_monitor.csv`
 
-#### Gerenciamento de Cgroups
-
+### Análise de Namespaces
 ```bash
-# Modo interativo (requer root)
-sudo ./bin/cgroup_manager
-
-# Ou através do menu principal
-sudo ./bin/monitor menu
-# Escolha opção 3 (Control Group Manager)
+# Menu interativo: Opção 2
+./bin/monitor namespace <PID>
 ```
+Mostra todos os namespaces do processo especificado.
 
-#### Execução de Experimentos
-
+### Gerenciamento de Cgroups
 ```bash
-# Experimento 1: Overhead de Monitoramento (sem root)
-./bin/monitor experiment 1
+# Menu interativo: Opção 3
 
-# Experimento 2: Isolamento via Namespaces (requer root)
-sudo ./bin/monitor experiment 2
-
-# Experimento 3: CPU Throttling (requer root)
-sudo ./bin/monitor experiment 3
-
-# Experimento 4: Limite de Memória (requer root)
-sudo ./bin/monitor experiment 4
-
-# Experimento 5: Limite de I/O (requer root)
-sudo ./bin/monitor experiment 5
+# Via linha de comando:
+sudo ./bin/cgroup_manager create my_group
+sudo ./bin/cgroup_manager set-cpu my_group 50000 100000  # 50% CPU
+sudo ./bin/cgroup_manager set-memory my_group 512M
+sudo ./bin/cgroup_manager add-process my_group 1234
+sudo ./bin/cgroup_manager delete my_group
 ```
 
-### Exemplos de Uso Completos
-
-#### Exemplo 1: Monitorar Servidor Web
-
+### Experimentos
 ```bash
-# Iniciar servidor (exemplo)
-python3 -m http.server 8000 &
+# Menu interativo: Opção 4 > Selecionar experimento
 
-# Obter PID
-PID=$(pgrep -f "http.server")
+# Overhead de monitoramento
+sudo ./bin/monitor experiment overhead
 
-# Monitorar em tempo real
-./bin/monitor tui $PID
+# CPU throttling (50% por 30 segundos)
+sudo ./bin/monitor experiment cpu-throttle 50 30
 
-# Ou exportar métricas para análise
-./bin/monitor process $PID 2 120 json
+# Memory limit (256 MB)
+sudo ./bin/monitor experiment memory-limit 256
+
+# I/O limit (50 MB/s por 30 segundos)
+sudo ./bin/monitor experiment io-limit 50 30
+
+# Namespace isolation (PID namespace)
+sudo ./bin/monitor experiment namespace 0
 ```
 
-Saída: `output/process_monitoring.json`
+Resultados salvos em: `output/experiments/`
 
-#### Exemplo 2: Validar Isolamento de Container
-
+### Visualização de Dados
 ```bash
-# Comparar namespaces do sistema vs container Docker
-sudo ./bin/monitor namespace compare 1 $(docker inspect -f '{{.State.Pid}}' <container_name>)
+# Gerar todos os gráficos
+python3 scripts/visualize.py output/experiments output/graphs
+
+# Gráfico específico
+python3 scripts/visualize.py output output/graphs
 ```
 
-#### Exemplo 3: Limitar CPU de Processo
+Gráficos gerados:
+- `cpu_usage.png`: Uso de CPU ao longo do tempo
+- `memory_usage.png`: Uso de memória
+- `io_stats.png`: Estatísticas de I/O
+- `network_stats.png`: Estatísticas de rede
+- Gráficos de experimentos individuais
 
-```bash
-# Via menu interativo
-sudo ./bin/monitor menu
-# 1. Escolha opção 3 (Control Groups)
-# 2. Escolha opção 4 (Criar cgroup)
-# 3. Escolha opção 6 (Mover processo)
-# 4. Escolha opção 7 (Aplicar limites)
-
-# Ou execute o experimento 3 que demonstra isso
-sudo ./bin/monitor experiment 3
-```
-
-#### Exemplo 4: Executar Todos os Experimentos e Gerar Visualizações
-
-```bash
-# Via menu
-sudo ./bin/monitor menu
-# Escolha opção 4 (Experimentos)
-# Escolha opção 6 (Executar TODOS)
-# Aguarde conclusão...
-# Escolha opção 7 (Gerar visualizações)
-
-# Visualizar gráficos gerados
-ls -lh output/graphs/
-# exp1_overhead.png
-# exp1_context_switches.png
-# exp1_execution_time.png
-# exp3_cpu_usage.png
-# exp4_memory_usage.png
-# exp5_io_operations.png
-```
-
-#### Exemplo 5: Gerar Visualizações Manualmente
-
-```bash
-# Ativar ambiente virtual Python
-source venv/bin/activate
-
-# Gerar visualizações de todos os experimentos
-venv/bin/python scripts/visualize.py --experiments output/graphs
-
-# Gerar visualização de experimento específico
-venv/bin/python scripts/visualize.py output/experiment1_overhead.csv output/graphs
-```
-
-### Estrutura de Saída
-
-```
-output/
-├── experiment1_overhead.csv              # Dados do experimento 1
-├── experiment3_cpu_throttling.csv        # Dados do experimento 3
-├── experiment4_memory_limit.csv          # Dados do experimento 4
-├── experiment5_io_limit.csv              # Dados do experimento 5
-├── experiments/
-│   └── exp2_namespace_isolation.json     # Dados do experimento 2
-├── graphs/
-│   ├── exp1_overhead.png                 # Gráficos gerados
-│   ├── exp1_context_switches.png
-│   ├── exp1_execution_time.png
-│   ├── exp3_cpu_usage.png
-│   ├── exp4_memory_usage.png
-│   └── exp5_io_operations.png
-└── process_monitoring.json               # Dados de monitoramento contínuo
-```
-
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 resource-monitor/
-├── bin/                         # Binários compilados
-│   ├── monitor                  # Aplicação principal
-│   └── cgroup_manager           # Utilitário de cgroups
-├── obj/                         # Arquivos objeto (.o)
-├── output/                      # Dados gerados
-│   ├── graphs/                  # Gráficos PNG
-│   └── experiments/             # Dados de experimentos
-├── src/                         # Código-fonte
-│   ├── main.c                   # Entry point
-│   ├── monitor_tui.c            # Interface TUI
-│   ├── resource_profiler.c      # Profiler de recursos
-│   ├── namespace_analyzer.c     # Análise de namespaces
-│   ├── cgroup_v2.c              # Gerenciamento de cgroups
-│   ├── cgroup_manager.c         # CLI para cgroups
-│   ├── experiments.c            # Implementação dos experimentos
-│   ├── cpu_monitor.c            # Coleta de métricas CPU
-│   ├── memory_monitor.c         # Coleta de métricas memória
-│   ├── io_monitor.c             # Coleta de métricas I/O
-│   ├── network_monitor.c        # Coleta de métricas rede
-│   ├── utils.c                  # Funções auxiliares
-│   └── process_monitor.c        # Monitoramento de processos
-├── include/                     # Headers
-│   ├── resource_profiler.h
-│   ├── namespace.h
-│   ├── cgroup.h
-│   ├── monitor.h
+├── src/                    # Código fonte
+│   ├── monitor_tui.c      # Interface TUI principal
+│   ├── cpu_monitor.c      # Monitor de CPU
+│   ├── memory_monitor.c   # Monitor de memória
+│   ├── io_monitor.c       # Monitor de I/O
+│   ├── network_monitor.c  # Monitor de rede
+│   ├── cgroup_v2.c        # API de cgroups v2
+│   ├── process_monitor.c  # Monitor de processos
+│   ├── namespace_analyzer.c # Análise de namespaces
+│   ├── utils.c            # Funções utilitárias
+│   ├── experiments.c      # Framework de experimentos
+│   ├── experiment_overhead.c
+│   ├── experiment_cpu_throttling.c
+│   ├── experiment_memory_limit.c
+│   └── experiment_io_limit.c
+├── include/               # Headers
+│   ├── monitors.h
+│   ├── cgroup_v2.h
+│   ├── process_monitor.h
+│   ├── experiments.h
 │   └── utils.h
-├── tests/                       # Testes
-│   └── test_*.c
-├── scripts/                     # Scripts auxiliares
-│   ├── compare_tools.sh         # Comparação de ferramentas
-│   └── visualize.py             # Geração de gráficos
-├── docs/                        # Documentação
-│   ├── QUICK_START.md           # Guia rápido
-│   ├── ARCHITECTURE.md          # Arquitetura do sistema
-│   └── EXPERIMENTS_REPORT.md    # Relatório dos experimentos
-├── Makefile                     # Sistema de build
-├── build.sh                     # Script de build rápido
-└── README.md                    # Este arquivo
+├── scripts/               # Scripts utilitários
+│   └── visualize.py       # Geração de gráficos
+├── bin/                   # Binários compilados
+│   ├── monitor            # Programa principal
+│   └── cgroup_manager     # Gerenciador de cgroups
+├── output/                # Dados de saída
+│   ├── experiments/       # Resultados de experimentos
+│   └── graphs/            # Gráficos gerados
+├── Makefile              # Sistema de build
+├── build.sh              # Script de build automatizado
+├── requirements.txt      # Dependências Python
+└── README.md             # Esta documentação
 ```
 
-## 📊 Componentes Principais
+## Exemplos de Uso
 
-| Componente | Arquivos | Descrição |
-|-----------|----------|-----------|
-| **Core do Monitor** | `src/main.c`, `src/monitor_tui.c` | Menu interativo, interface TUI, loop de monitoramento |
-| **Coleta de Métricas** | `src/cpu_monitor.c`, `src/memory_monitor.c`, `src/io_monitor.c`, `src/network_monitor.c` | Leitura de dados do /proc e cálculos de uso |
-| **Namespace Analyzer** | `src/namespace_analyzer.c` | Análise, comparação e relatórios de namespaces |
-| **Cgroup Manager** | `src/cgroup_v2.c`, `src/cgroup_manager.c` | Gerenciamento de cgroups v2, aplicação de limites |
-| **Experimento 1** | `src/experiment_overhead.c` | Medição de overhead de monitoramento |
-| **Experimento 2** | `src/experiments.c` (namespace) | Validação de isolamento via namespaces |
-| **Experimento 3** | `src/experiment_cpu_throttling.c` | Demonstração de CPU throttling |
-| **Experimento 4** | `src/experiment_memory_limit.c` | Demonstração de limites de memória |
-| **Experimento 5** | `src/experiment_io_limit.c` | Demonstração de limites de I/O |
-| **Visualização** | `scripts/visualize.py` | Geração de gráficos com matplotlib |
-| **Utilitários** | `src/utils.c`, `src/process_monitor.c` | Funções auxiliares e exportação de dados |
+### Monitorar um Processo Específico
+```bash
+# Encontrar PID do processo
+ps aux | grep firefox
 
-## 👥 Autor
+# Monitorar CPU e memória
+./bin/monitor process 1234 60
+```
 
-Leandro Casiragh - Grupo 9
+### Experimento Completo
+```bash
+# 1. Executar experimentos
+sudo ./bin/monitor menu
+# Selecionar: 4 (Experiments) > 1-5 (cada experimento)
 
-Este projeto foi desenvolvido individualmente como trabalho RA3 da disciplina de Sistemas Operacionais.
+# 2. Visualizar resultados
+python3 scripts/visualize.py output/experiments output/graphs
 
-## 📄 Licença
+# 3. Ver gráficos
+xdg-open output/graphs/cpu_usage.png
+```
 
-Projeto acadêmico desenvolvido para fins educacionais - Sistemas Operacionais, 2025.
+### Pipeline de CI/CD
+```bash
+#!/bin/bash
+# Executar testes automatizados
+./build.sh
+sudo ./bin/monitor experiment overhead
+sudo ./bin/monitor experiment cpu-throttle 50 30
+python3 scripts/visualize.py output/experiments output/graphs
+# Verificar resultados...
+```
 
-## 📞 Suporte
+## Troubleshooting
 
-Para questões sobre o projeto:
+### Erro: "Permission denied" ao criar cgroup
+```bash
+# Solução: Executar com sudo
+sudo ./bin/monitor menu
+```
 
-- Consulte a documentação em `docs/`
-- Verifique `docs/QUICK_START.md` para início rápido
-- Leia `docs/EXPERIMENTS_REPORT.md` para detalhes dos experimentos
+### Erro: "cgroups v2 not available"
+```bash
+# Verificar se cgroups v2 está montado
+mount | grep cgroup2
 
----
+# Montar manualmente se necessário
+sudo mount -t cgroup2 none /sys/fs/cgroup
+```
 
-**Última atualização**: 2025-11-17  
-**Status**: Em desenvolvimento  
-**Versão**: 1.0.0-dev
+### Erro: "Failed to open /proc/stat"
+```bash
+# Verificar permissões
+ls -la /proc/stat
 
-Estrutura exigida pelo enunciado já mapeada aqui.
+# Deve ser legível por todos
+# -r--r--r-- 1 root root ...
+```
 
----
+### Gráficos não são gerados
+```bash
+# Instalar dependências Python
+pip3 install pandas matplotlib numpy
 
-Para detalhes e metodologia dos experimentos, veja `docs/ARCHITECTURE.md`.
+# Verificar instalação
+python3 -c "import pandas, matplotlib, numpy"
+```
+
+### Caracteres estranhos no terminal
+```bash
+# Usar terminal com suporte UTF-8
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+```
+
+## Desenvolvimento
+
+### Adicionar Novo Monitor
+1. Criar `src/my_monitor.c` e `include/my_monitor.h`
+2. Implementar funções `read_my_stats()` e `monitor_my()`
+3. Adicionar ao Makefile
+4. Integrar no `monitor_tui.c`
+
+### Adicionar Novo Experimento
+1. Criar `src/experiment_my_test.c`
+2. Definir estrutura de resultado em `include/experiments.h`
+3. Implementar função `experiment_my_test()`
+4. Adicionar opção no menu TUI
+
+### Contribuir
+1. Fork o repositório
+2. Criar branch: `git checkout -b feature/my-feature`
+3. Commit: `git commit -am 'Add new feature'`
+4. Push: `git push origin feature/my-feature`
+5. Criar Pull Request
+
+## Referências
+
+- [Linux Control Groups v2](https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html)
+- [Linux Namespaces](https://man7.org/linux/man-pages/man7/namespaces.7.html)
+- [proc(5) Manual](https://man7.org/linux/man-pages/man5/proc.5.html)
+- [ncurses Programming Guide](https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/)
+
+## Licença
+
+MIT License - Veja LICENSE para detalhes
+
+## Autor
+
+Leandro Casiraghini
+GitHub: LeandroCasiragh1/resource-monitor
