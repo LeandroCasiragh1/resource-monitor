@@ -35,17 +35,13 @@ all: $(MONITOR_BIN) $(CGROUP_MGR_BIN)
 
 # Monitor principal
 $(MONITOR_BIN): $(OBJ_DIR)/monitor_tui.o $(OBJ_DIR)/resource_profiler.o \
-                $(OBJ_DIR)/namespace_analyzer.o $(OBJ_DIR)/cgroup_v2.o \
-                $(OBJ_DIR)/experiments.o $(OBJ_DIR)/utils.o \
-                $(OBJ_DIR)/cpu_monitor.o $(OBJ_DIR)/memory_monitor.o \
-                $(OBJ_DIR)/io_monitor.o | $(BIN_DIR)
+                $(OBJ_DIR)/namespace_analyzer.o | $(BIN_DIR)
 	@echo "Linking $@..."
 	@$(CC) $(CFLAGS) $(CFLAGS_NCURSES) -o $@ $^ $(LDFLAGS)
 	@echo "✓ $@ compilado"
 
 # Gerenciador de Cgroups
-$(CGROUP_MGR_BIN): $(OBJ_DIR)/cgroup_manager.o $(OBJ_DIR)/cgroup_v2.o \
-                   $(OBJ_DIR)/utils.o | $(BIN_DIR)
+$(CGROUP_MGR_BIN): $(OBJ_DIR)/cgroup_manager.o | $(BIN_DIR)
 	@echo "Linking $@..."
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "✓ $@ compilado"

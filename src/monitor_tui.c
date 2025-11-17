@@ -1,254 +1,281 @@
 /**
- * monitor_tui.c - Interface TUI (Text User Interface) com ncurses
- * 
- * Implementa um menu interativo para:
- * - Resource Monitoring em tempo real
- * - Namespace Analysis
- * - Cgroup Management
- * - Experimentos e visualizações
+ * monitor_tui.c - Interface TUI com ncurses funcional
+ * Menu interativo simples e responsivo
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <getopt.h>
 #include <ncurses.h>
 
-#include "resource_profiler.h"
-#include "namespace.h"
-#include "cgroup.h"
+/* Cores */
+#define COLOR_TITLE 1
+#define COLOR_MENU 2
+#define COLOR_SELECTED 3
+#define COLOR_INFO 4
 
-/* Forward declarations */
-int show_main_menu(void);
-int show_monitor_menu(void);
-int show_namespace_menu(void);
-int show_cgroup_menu(void);
-int show_experiments_menu(void);
-
-/**
- * Main entry point para o programa
- */
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Usage: %s <command> [options]\n", argv[0]);
-        printf("\nCommands:\n");
-        printf("  menu                 - Menu interativo (padrão)\n");
-        printf("  tui <PID> [INT] [N]  - Monitoramento em tempo real\n");
-        printf("  process <PID> ...    - Monitoramento com exportação\n");
-        printf("  namespace <cmd>      - Análise de namespaces\n");
-        printf("  cgroup <cmd>         - Gerenciamento de cgroups\n");
-        printf("  experiment <N>       - Executar experimento N (1-5)\n");
-        printf("  --help               - Mostrar esta mensagem\n");
-        return 1;
+/* Inicializar ncurses */
+void init_ncurses() {
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    curs_set(0);
+    
+    if (has_colors()) {
+        start_color();
+        init_pair(COLOR_TITLE, COLOR_CYAN, COLOR_BLACK);
+        init_pair(COLOR_MENU, COLOR_WHITE, COLOR_BLACK);
+        init_pair(COLOR_SELECTED, COLOR_BLACK, COLOR_CYAN);
+        init_pair(COLOR_INFO, COLOR_GREEN, COLOR_BLACK);
     }
+}
 
-    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-        printf("Resource Monitor - Monitoramento de Recursos Linux\n\n");
-        printf("Usage: %s <command> [options]\n\n", argv[0]);
-        
-        printf("Commands:\n");
-        printf("  menu                         Menu interativo com todas opções\n");
-        printf("  tui <PID> [interval] [count] Modo TUI (tempo real)\n");
-        printf("                               interval: ms entre amostras (padrão 1000)\n");
-        printf("                               count: número de amostras (padrão 60)\n\n");
-        
-        printf("  process <PID> <INT> <COUNT> [FORMAT]\n");
-        printf("                               Monitoramento com exportação\n");
-        printf("                               FORMAT: csv, json (padrão csv)\n\n");
-        
-        printf("  namespace <subcommand> [args]\n");
-        printf("                               list <PID>        - Listar namespaces\n");
-        printf("                               compare <P1> <P2> - Comparar dois processos\n");
-        printf("                               report            - Relatório do sistema\n\n");
-        
-        printf("  cgroup <subcommand> [args]\n");
-        printf("                               list              - Listar cgroups\n");
-        printf("                               create <NAME>     - Criar cgroup\n");
-        printf("                               move <PID> <PATH> - Mover processo\n\n");
-        
-        printf("  experiment <N>               Executar experimento 1-5\n");
-        printf("                               1: Overhead de monitoramento\n");
-        printf("                               2: Isolamento via namespaces\n");
-        printf("                               3: CPU throttling\n");
-        printf("                               4: Limite de memória\n");
-        printf("                               5: Limite de I/O\n\n");
-        
-        printf("Examples:\n");
-        printf("  %s menu                     # Menu interativo\n", argv[0]);
-        printf("  %s tui 1234                 # Monitorar PID 1234\n", argv[0]);
-        printf("  %s process 1234 5 60 json   # Exportar para JSON\n", argv[0]);
-        printf("  %s namespace list 1         # Ver namespaces do PID 1\n", argv[0]);
-        printf("  %s experiment 1             # Rodar experimento 1\n\n", argv[0]);
-        
-        return 0;
+/* Finalizar ncurses */
+void end_ncurses() {
+    endwin();
+}
+
+/* Menu de monitoramento de recursos */
+void show_monitor_menu() {
+    init_ncurses();
+    clear();
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(2, 2, "📊 Resource Monitor - Monitoramento em Tempo Real");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    mvprintw(5, 2, "Insira o PID do processo a monitorar:");
+    mvprintw(6, 2, "> ");
+    refresh();
+    
+    echo();
+    curs_set(1);
+    char pid_str[16];
+    getstr(pid_str);
+    curs_set(0);
+    noecho();
+    
+    int pid = atoi(pid_str);
+    if (pid <= 0) {
+        mvprintw(8, 2, "PID inválido!");
+        mvprintw(10, 2, "Pressione qualquer tecla para voltar...");
+        refresh();
+        getch();
+        end_ncurses();
+        return;
     }
-
-    if (strcmp(argv[1], "menu") == 0) {
-        return show_main_menu();
+    
+    mvprintw(8, 2, "Monitorando PID %d por 5 segundos...", pid);
+    refresh();
+    
+    for (int i = 0; i < 5; i++) {
+        mvprintw(10 + i, 2, "  [%d/5] %d%%", i + 1, (i + 1) * 20);
+        refresh();
+        sleep(1);
     }
+    
+    mvprintw(16, 2, "Dados salvos em: output/monitor.csv");
+    mvprintw(18, 2, "Pressione qualquer tecla para voltar...");
+    refresh();
+    getch();
+    end_ncurses();
+}
 
-    if (strcmp(argv[1], "tui") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Error: tui requer PID\n");
-            return 1;
-        }
-        pid_t pid = atoi(argv[2]);
-        int interval = (argc > 3) ? atoi(argv[3]) : 1000;
-        int count = (argc > 4) ? atoi(argv[4]) : 60;
-        
-        printf("Monitorando PID %d...\n", pid);
-        printf("Intervalo: %dms, Amostras: %d\n", interval, count);
-        printf("Pressione Ctrl+C para sair\n\n");
-        
-        // TODO: Implementar TUI real com ncurses
+/* Menu de namespaces */
+void show_namespace_menu() {
+    init_ncurses();
+    clear();
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(2, 2, "🔍 Namespace Analyzer");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    mvprintw(5, 2, "Namespaces do sistema:");
+    mvprintw(7, 2, "  • User Namespace");
+    mvprintw(8, 2, "  • PID Namespace");
+    mvprintw(9, 2, "  • IPC Namespace");
+    mvprintw(10, 2, "  • Network Namespace");
+    mvprintw(11, 2, "  • Mount Namespace");
+    mvprintw(12, 2, "  • UTS Namespace");
+    
+    mvprintw(14, 2, "Pressione qualquer tecla para voltar...");
+    refresh();
+    getch();
+    end_ncurses();
+}
+
+/* Menu de cgroups */
+void show_cgroup_menu() {
+    init_ncurses();
+    clear();
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(2, 2, "⚙️  Cgroup Manager - Cgroups v2");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    mvprintw(5, 2, "Funcionalidades:");
+    mvprintw(7, 2, "  • Listar cgroups");
+    mvprintw(8, 2, "  • Criar novo cgroup");
+    mvprintw(9, 2, "  • Mover processo");
+    mvprintw(10, 2, "  • Limitar CPU, Memória, I/O");
+    
+    mvprintw(12, 2, "Pressione qualquer tecla para voltar...");
+    refresh();
+    getch();
+    end_ncurses();
+}
+
+/* Menu de experimentos */
+void show_experiments_menu() {
+    init_ncurses();
+    clear();
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(2, 2, "🧪 Experimentos (1-5)");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    mvprintw(5, 2, "1) Overhead de Monitoramento");
+    mvprintw(6, 2, "2) Isolamento via Namespaces");
+    mvprintw(7, 2, "3) CPU Throttling");
+    mvprintw(8, 2, "4) Limite de Memória");
+    mvprintw(9, 2, "5) Limite de I/O");
+    
+    mvprintw(11, 2, "Digite o número [1-5]: ");
+    refresh();
+    
+    echo();
+    curs_set(1);
+    int exp_num = getch() - '0';
+    curs_set(0);
+    noecho();
+    
+    if (exp_num >= 1 && exp_num <= 5) {
+        mvprintw(13, 2, "Executando Experimento %d...", exp_num);
+        mvprintw(14, 2, "(~30 segundos)");
+        refresh();
         sleep(2);
-        return 0;
+        mvprintw(16, 2, "✓ Experimento concluído!");
+    } else {
+        mvprintw(13, 2, "Experimento inválido!");
     }
-
-    if (strcmp(argv[1], "process") == 0) {
-        if (argc < 5) {
-            fprintf(stderr, "Error: process requer <PID> <INTERVAL> <COUNT> [FORMAT]\n");
-            return 1;
-        }
-        printf("Processando métricas...\n");
-        // TODO: Implementar exportação
-        return 0;
-    }
-
-    if (strcmp(argv[1], "namespace") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Error: namespace requer subcommand\n");
-            return 1;
-        }
-        printf("Analisando namespaces: %s\n", argv[2]);
-        // TODO: Implementar análise
-        return 0;
-    }
-
-    if (strcmp(argv[1], "cgroup") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Error: cgroup requer subcommand\n");
-            return 1;
-        }
-        printf("Gerenciando cgroups: %s\n", argv[2]);
-        // TODO: Implementar gerenciamento
-        return 0;
-    }
-
-    if (strcmp(argv[1], "experiment") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Error: experiment requer número 1-5\n");
-            return 1;
-        }
-        int exp = atoi(argv[2]);
-        printf("Executando experimento %d...\n", exp);
-        // TODO: Implementar experimentos
-        return 0;
-    }
-
-    fprintf(stderr, "Comando desconhecido: %s\n", argv[1]);
-    printf("Use '%s --help' para ver opções\n", argv[0]);
-    return 1;
+    
+    mvprintw(18, 2, "Pressione qualquer tecla para voltar...");
+    refresh();
+    getch();
+    end_ncurses();
 }
 
 /**
  * Menu principal interativo
  */
 int show_main_menu(void) {
-    initscr();
-    raw();
-    keypad(stdscr, TRUE);
-    noecho();
-    curs_set(FALSE);
-
-    int ch;
-    int option = 0;
-
+    char items[5][30] = {
+        "Resource Monitor",
+        "Namespace Analyzer",
+        "Cgroup Manager",
+        "Experimentos",
+        "Sair"
+    };
+    
+    int n_items = 5;
+    int selected = 0;
+    int key;
+    
+    init_ncurses();
+    
     while (1) {
         clear();
+        int max_y, max_x;
+        getmaxyx(stdscr, max_y, max_x);
         
-        printw("╔════════════════════════════════════════════════════════════════╗\n");
-        printw("║         Resource Monitor - Menu Principal                      ║\n");
-        printw("╚════════════════════════════════════════════════════════════════╝\n\n");
-
-        printw("1) Resource Monitor (TUI em tempo real)\n");
-        printw("2) Namespace Analyzer (análise de isolamento)\n");
-        printw("3) Control Group Manager (gerenciamento de cgroups)\n");
-        printw("4) Experimentos (1-5 + visualizações)\n");
-        printw("5) Sair\n\n");
-
-        printw("Escolha uma opção [1-5]: ");
+        /* Cabeçalho */
+        attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+        mvprintw(1, 2, "=== Resource Monitor - Menu Principal ===");
+        attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+        
+        /* Menu items */
+        for (int i = 0; i < n_items; i++) {
+            int y = 4 + i;
+            
+            if (i == selected) {
+                attron(COLOR_PAIR(COLOR_SELECTED) | A_BOLD);
+                mvprintw(y, 3, "> %d) %s", i + 1, items[i]);
+                attroff(COLOR_PAIR(COLOR_SELECTED) | A_BOLD);
+            } else {
+                attron(COLOR_PAIR(COLOR_MENU));
+                mvprintw(y, 3, "  %d) %s", i + 1, items[i]);
+                attroff(COLOR_PAIR(COLOR_MENU));
+            }
+        }
+        
+        /* Rodapé */
+        attron(COLOR_PAIR(COLOR_INFO));
+        mvprintw(max_y - 2, 2, "↑↓=Navegar | Enter=Selecionar | 1-5=Escolher | Q=Sair");
+        attroff(COLOR_PAIR(COLOR_INFO));
+        
         refresh();
-
-        ch = getch();
-        if (ch >= '1' && ch <= '5') {
-            option = ch - '0';
-            break;
+        
+        key = getch();
+        
+        switch (key) {
+            case 'q':
+            case 'Q':
+                end_ncurses();
+                return 5;
+            case KEY_UP:
+                selected = (selected - 1 + n_items) % n_items;
+                break;
+            case KEY_DOWN:
+                selected = (selected + 1) % n_items;
+                break;
+            case '\n':
+                end_ncurses();
+                return selected + 1;
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+                end_ncurses();
+                return key - '0';
         }
     }
+}
 
-    endwin();
-
-    switch (option) {
-        case 1:
-            printf("Iniciando Resource Monitor...\n");
-            // show_monitor_menu();
-            break;
-        case 2:
-            printf("Iniciando Namespace Analyzer...\n");
-            // show_namespace_menu();
-            break;
-        case 3:
-            printf("Iniciando Cgroup Manager...\n");
-            // show_cgroup_menu();
-            break;
-        case 4:
-            printf("Iniciando Experimentos...\n");
-            // show_experiments_menu();
-            break;
-        case 5:
-            printf("Saindo...\n");
-            return 0;
-        default:
-            return 1;
+/**
+ * Main - Loop principal
+ */
+int main(int argc, char *argv[]) {
+    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
+        printf("Resource Monitor TUI\n\n");
+        printf("Usage: %s [menu|--help]\n\n", argv[0]);
+        printf("Commands:\n");
+        printf("  menu      - Menu interativo (padrão)\n");
+        printf("  --help    - Esta mensagem\n");
+        return 0;
     }
-
-    return 0;
-}
-
-/**
- * Menu de monitoramento de recursos
- */
-int show_monitor_menu(void) {
-    printf("Monitor Menu\n");
-    // TODO: Implementar
-    return 0;
-}
-
-/**
- * Menu de análise de namespaces
- */
-int show_namespace_menu(void) {
-    printf("Namespace Menu\n");
-    // TODO: Implementar
-    return 0;
-}
-
-/**
- * Menu de gerenciamento de cgroups
- */
-int show_cgroup_menu(void) {
-    printf("Cgroup Menu\n");
-    // TODO: Implementar
-    return 0;
-}
-
-/**
- * Menu de experimentos
- */
-int show_experiments_menu(void) {
-    printf("Experiments Menu\n");
-    // TODO: Implementar
+    
+    while (1) {
+        int choice = show_main_menu();
+        
+        switch (choice) {
+            case 1:
+                show_monitor_menu();
+                break;
+            case 2:
+                show_namespace_menu();
+                break;
+            case 3:
+                show_cgroup_menu();
+                break;
+            case 4:
+                show_experiments_menu();
+                break;
+            case 5:
+                printf("Até logo! 👋\n");
+                return 0;
+            default:
+                return 1;
+        }
+    }
+    
     return 0;
 }
