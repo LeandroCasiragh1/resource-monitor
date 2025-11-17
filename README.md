@@ -5,18 +5,21 @@ Sistema completo de monitoramento de recursos do sistema com suporte a cgroups v
 ## Funcionalidades
 
 ### Monitoramento em Tempo Real
+
 - **CPU**: Uso percentual, tempo de usuário/sistema, idle
 - **Memória**: Total, usado, disponível, cache, buffers, swap
 - **I/O**: Leituras/escritas por segundo, operações completadas
 - **Rede**: Taxa de RX/TX, pacotes, erros
 
 ### Controle de Recursos com Cgroups v2
+
 - Limitação de CPU (quota/period e weight)
 - Limitação de memória (max, high watermark)
 - Limitação de I/O (read/write bps)
 - Estatísticas de uso por cgroup
 
 ### Isolamento com Namespaces
+
 - PID: Isolamento de processos
 - NET: Stack de rede isolada
 - MNT: Pontos de montagem isolados
@@ -25,6 +28,7 @@ Sistema completo de monitoramento de recursos do sistema com suporte a cgroups v
 - USER: Mapeamento de usuários
 
 ### Experimentos
+
 1. **Overhead de Monitoramento**: Mede o impacto do monitoramento no desempenho
 2. **CPU Throttling**: Testa limitação de CPU com cgroups
 3. **Memory Limit**: Testa comportamento sob pressão de memória
@@ -32,6 +36,7 @@ Sistema completo de monitoramento de recursos do sistema com suporte a cgroups v
 5. **Namespace Isolation**: Verifica isolamento de namespaces
 
 ### Visualização
+
 - Gráficos automáticos com Python/Matplotlib
 - Exportação em CSV para análise
 - Gráficos salvos como PNG de alta resolução
@@ -39,15 +44,18 @@ Sistema completo de monitoramento de recursos do sistema com suporte a cgroups v
 ## Requisitos
 
 ### Sistema Operacional
+
 - Linux kernel 4.5+ (para cgroups v2 completo)
 - Ubuntu 20.04+ / Debian 11+ / Fedora 31+ recomendado
 
 ### Build
+
 ```bash
 sudo apt-get install build-essential libncurses-dev pkg-config
 ```
 
 ### Visualização (opcional)
+
 ```bash
 pip3 install -r requirements.txt
 # ou
@@ -55,23 +63,27 @@ pip3 install pandas matplotlib numpy
 ```
 
 ### Permissões
+
 - Root ou sudo para operações com cgroups
 - Permissões de leitura em /proc e /sys/fs/cgroup
 
 ## Instalação
 
 ### Compilação Rápida
+
 ```bash
 ./build.sh
 ```
 
 ### Compilação Manual
+
 ```bash
 make clean
 make
 ```
 
 ### Instalação no Sistema
+
 ```bash
 sudo make install
 ```
@@ -79,53 +91,66 @@ sudo make install
 ## Uso
 
 ### Menu Interativo (TUI)
+
 ```bash
 ./bin/monitor menu
 ```
 
 Navegação:
+
 - Setas UP/DOWN: Navegar entre opções
 - Números 1-5: Selecionar diretamente
 - ENTER: Confirmar seleção
 - Q: Sair
 
 ### Monitoramento de CPU
+
 ```bash
 # Menu interativo: Opção 1 > CPU Monitor
 # Ou via linha de comando:
 ./bin/monitor cpu 60  # 60 segundos
 ```
+
 Gera: `output/cpu_monitor.csv`
 
 ### Monitoramento de Memória
+
 ```bash
 # Menu interativo: Opção 1 > Memory Monitor
 ./bin/monitor memory 60
 ```
+
 Gera: `output/memory_monitor.csv`
 
 ### Monitoramento de I/O
+
 ```bash
 # Menu interativo: Opção 1 > I/O Monitor
 ./bin/monitor io sda 60  # Monitorar device sda por 60s
 ```
+
 Gera: `output/io_monitor.csv`
 
 ### Monitoramento de Rede
+
 ```bash
 # Menu interativo: Opção 1 > Network Monitor
 ./bin/monitor network eth0 60  # Interface eth0 por 60s
 ```
+
 Gera: `output/network_monitor.csv`
 
 ### Análise de Namespaces
+
 ```bash
 # Menu interativo: Opção 2
 ./bin/monitor namespace <PID>
 ```
+
 Mostra todos os namespaces do processo especificado.
 
 ### Gerenciamento de Cgroups
+
 ```bash
 # Menu interativo: Opção 3
 
@@ -138,6 +163,7 @@ sudo ./bin/cgroup_manager read /sys/fs/cgroup/my_group       # ler métricas
 ```
 
 ### Experimentos
+
 ```bash
 # Menu interativo: Opção 4 > Selecionar experimento
 
@@ -160,6 +186,7 @@ sudo ./bin/monitor experiment namespace 0
 Resultados salvos em: `output/experiments/`
 
 ### Visualização de Dados
+
 ```bash
 # Gerar todos os gráficos
 python3 scripts/visualize.py output/experiments output/graphs
@@ -169,6 +196,7 @@ python3 scripts/visualize.py output output/graphs
 ```
 
 Gráficos gerados:
+
 - `cpu_usage.png`: Uso de CPU ao longo do tempo
 - `memory_usage.png`: Uso de memória
 - `io_stats.png`: Estatísticas de I/O
@@ -217,6 +245,7 @@ resource-monitor/
 ## Exemplos de Uso
 
 ### Monitorar um Processo Específico
+
 ```bash
 # Encontrar PID do processo
 ps aux | grep firefox
@@ -226,6 +255,7 @@ ps aux | grep firefox
 ```
 
 ### Experimento Completo
+
 ```bash
 # 1. Executar experimentos
 sudo ./bin/monitor menu
@@ -239,6 +269,7 @@ xdg-open output/graphs/cpu_usage.png
 ```
 
 ### Pipeline de CI/CD
+
 ```bash
 #!/bin/bash
 # Executar testes automatizados
@@ -252,12 +283,14 @@ python3 scripts/visualize.py output/experiments output/graphs
 ## Troubleshooting
 
 ### Erro: "Permission denied" ao criar cgroup
+
 ```bash
 # Solução: Executar com sudo
 sudo ./bin/monitor menu
 ```
 
 ### Erro: "cgroups v2 not available"
+
 ```bash
 # Verificar se cgroups v2 está montado
 mount | grep cgroup2
@@ -267,6 +300,7 @@ sudo mount -t cgroup2 none /sys/fs/cgroup
 ```
 
 ### Erro: "Failed to open /proc/stat"
+
 ```bash
 # Verificar permissões
 ls -la /proc/stat
@@ -276,6 +310,7 @@ ls -la /proc/stat
 ```
 
 ### Gráficos não são gerados
+
 ```bash
 # Instalar dependências Python
 pip3 install pandas matplotlib numpy
@@ -285,6 +320,7 @@ python3 -c "import pandas, matplotlib, numpy"
 ```
 
 ### Caracteres estranhos no terminal
+
 ```bash
 # Usar terminal com suporte UTF-8
 export LANG=en_US.UTF-8
@@ -294,18 +330,21 @@ export LC_ALL=en_US.UTF-8
 ## Desenvolvimento
 
 ### Adicionar Novo Monitor
+
 1. Criar `src/my_monitor.c` e `include/my_monitor.h`
 2. Implementar funções `read_my_stats()` e `monitor_my()`
 3. Adicionar ao Makefile
 4. Integrar no `monitor_tui.c`
 
 ### Adicionar Novo Experimento
+
 1. Criar `src/experiment_my_test.c`
 2. Definir estrutura de resultado em `include/experiments.h`
 3. Implementar função `experiment_my_test()`
 4. Adicionar opção no menu TUI
 
 ### Contribuir
+
 1. Fork o repositório
 2. Criar branch: `git checkout -b feature/my-feature`
 3. Commit: `git commit -am 'Add new feature'`

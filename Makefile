@@ -38,7 +38,7 @@ $(MONITOR_BIN): $(OBJ_DIR)/monitor_tui.o $(OBJ_DIR)/resource_profiler.o \
                 $(OBJ_DIR)/namespace_analyzer.o $(OBJ_DIR)/cpu_monitor.o \
                 $(OBJ_DIR)/memory_monitor.o $(OBJ_DIR)/io_monitor.o \
                 $(OBJ_DIR)/network_monitor.o $(OBJ_DIR)/utils.o \
-                $(OBJ_DIR)/cgroup_v2.o $(OBJ_DIR)/process_monitor.o \
+                $(OBJ_DIR)/cgroup_manager.o $(OBJ_DIR)/cgroup_v2.o $(OBJ_DIR)/process_monitor.o \
                 $(OBJ_DIR)/experiments.o $(OBJ_DIR)/experiment_overhead.o \
                 $(OBJ_DIR)/experiment_cpu_throttling.o $(OBJ_DIR)/experiment_memory_limit.o \
                 $(OBJ_DIR)/experiment_io_limit.o | $(BIN_DIR)
