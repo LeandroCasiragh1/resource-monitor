@@ -24,6 +24,8 @@ int cgroup_exists(const char *name) {
     return (stat(path, &st) == 0 && S_ISDIR(st.st_mode));
 }
 
+// Commented out to avoid collision with cgroup_manager.c
+/*
 int cgroup_create(const char *name) {
     if (cgroup_exists(name)) {
         log_info("Cgroup %s already exists", name);
@@ -40,6 +42,7 @@ int cgroup_create(const char *name) {
     log_info("Created cgroup: %s", name);
     return 0;
 }
+*/
 
 int cgroup_delete(const char *name) {
     if (!cgroup_exists(name)) {
@@ -181,6 +184,8 @@ int cgroup_set_cpu_weight(const char *name, int weight) {
     return 0;
 }
 
+// Commented out to avoid collision with cgroup_manager.c
+/*
 int cgroup_set_memory_max(const char *name, unsigned long bytes) {
     if (!cgroup_exists(name)) {
         log_error("Cgroup %s does not exist", name);
@@ -202,6 +207,7 @@ int cgroup_set_memory_max(const char *name, unsigned long bytes) {
     log_info("Set memory limit for %s: %lu bytes", name, bytes);
     return 0;
 }
+*/
 
 int cgroup_get_memory_usage(const char *name, unsigned long *usage) {
     if (!cgroup_exists(name)) {

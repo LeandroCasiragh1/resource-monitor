@@ -10,3 +10,4 @@ exp2,namespace,5.1
 exp4,memory_limit,oom
 exp5,io_limit,10x
 exp5,io_limit,10x
+exp2,namespace,Tested PID namespace - PASSED
