@@ -12,6 +12,7 @@
 #include "../include/resource_profiler.h"
 #include "../include/namespace.h"
 #include "../include/cgroup.h"
+#include "../include/experiments.h"
 
 /* Cores */
 #define COLOR_TITLE 1
@@ -120,15 +121,21 @@ static void show_namespace_menu() {
             if (sel==n-1) break;
             clear();
             if (sel==0) { /* listar */
-                echo(); curs_set(1); char buf[32]; mvprintw(2,2,"PID: "); getstr(buf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(buf); end_ncurses(); namespace_list_for_pid(p); init_ncurses();
+                echo(); curs_set(1); char buf[32]; mvprintw(2,2,"PID: "); getstr(buf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(buf); 
+                if (p > 0) { end_ncurses(); namespace_list_for_pid(p); printf("\nPressione ENTER..."); getchar(); init_ncurses(); } else { mvprintw(4,2,"PID inválido!"); }
             } else if (sel==1) { /* comparar */
-                echo(); curs_set(1); char a[32], b[32]; mvprintw(2,2,"PID1: "); getstr(a); mvprintw(3,2,"PID2: "); getstr(b); noecho(); curs_set(0); pid_t p1=(pid_t)atoi(a), p2=(pid_t)atoi(b); end_ncurses(); namespace_compare(p1,p2); init_ncurses();
+                echo(); curs_set(1); char a[32], b[32]; mvprintw(2,2,"PID1: "); getstr(a); mvprintw(3,2,"PID2: "); getstr(b); noecho(); curs_set(0); 
+                pid_t p1=(pid_t)atoi(a), p2=(pid_t)atoi(b); 
+                if (p1 > 0 && p2 > 0) { end_ncurses(); namespace_compare(p1,p2); printf("\nPressione ENTER..."); getchar(); init_ncurses(); } else { mvprintw(4,2,"PIDs inválidos!"); }
             } else if (sel==2) { /* mapear */
-                echo(); curs_set(1); char t[32]; mvprintw(2,2,"Tipo (pid/net/mnt/uts/ipc/user/cgroup): "); getstr(t); noecho(); curs_set(0); end_ncurses(); namespace_map_by_type(t); init_ncurses();
+                echo(); curs_set(1); char t[32]; mvprintw(2,2,"Tipo (pid/net/mnt/uts/ipc/user/cgroup): "); getstr(t); noecho(); curs_set(0); 
+                if (strlen(t) > 0) { end_ncurses(); namespace_map_by_type(t); printf("\nPressione ENTER..."); getchar(); init_ncurses(); } else { mvprintw(4,2,"Tipo inválido!"); }
             } else if (sel==3) { /* overhead */
-                echo(); curs_set(1); char t[32], it[32]; mvprintw(2,2,"Tipo: "); getstr(t); mvprintw(3,2,"Iterações: "); getstr(it); noecho(); curs_set(0); int iterations=atoi(it); end_ncurses(); namespace_creation_overhead(t, iterations); init_ncurses();
-            } else if (sel==4) { end_ncurses(); namespace_system_report(); init_ncurses(); }
-            mvprintw(10,2,"(Saída acima gerada fora do ncurses)"); mvprintw(11,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
+                echo(); curs_set(1); char t[32], it[32]; mvprintw(2,2,"Tipo: "); getstr(t); mvprintw(3,2,"Iterações: "); getstr(it); noecho(); curs_set(0); 
+                int iterations=atoi(it); if (iterations <= 0) iterations = 10;
+                if (strlen(t) > 0) { end_ncurses(); namespace_creation_overhead(t, iterations); printf("\nPressione ENTER..."); getchar(); init_ncurses(); } else { mvprintw(4,2,"Tipo inválido!"); }
+            } else if (sel==4) { end_ncurses(); namespace_system_report(); printf("\nPressione ENTER..."); getchar(); init_ncurses(); }
+            mvprintw(10,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
         } else if (ch>='1'&&ch<='6') { sel=ch-'1'; }
     }
     end_ncurses();
@@ -150,12 +157,20 @@ static void show_cgroup_menu() {
         mvprintw(11,2,"↑↓ navega | ENTER seleciona | Q sai"); refresh(); ch=getch();
         if (ch=='q'||ch=='Q') break; if(ch==KEY_UP) sel=(sel-1+n)%n; else if(ch==KEY_DOWN) sel=(sel+1)%n; else if(ch=='\n') {
             if (sel==n-1) break; clear();
-            if (sel==0){ echo(); curs_set(1); char name[64]; mvprintw(2,2,"Nome: "); getstr(name); noecho(); curs_set(0); end_ncurses(); int r=cgroup_create(name); printf("create(%s) => %d\n", name,r); init_ncurses(); }
-            else if (sel==1){ echo(); curs_set(1); char path[128]; mvprintw(2,2,"Path completo (/sys/fs/cgroup/<grupo>): "); getstr(path); noecho(); curs_set(0); end_ncurses(); int r=cgroup_read_metrics(path); printf("read(%s) => %d\n", path,r); init_ncurses(); }
-            else if (sel==2){ echo(); curs_set(1); char path[128], pidbuf[16]; mvprintw(2,2,"Path: "); getstr(path); mvprintw(3,2,"PID: "); getstr(pidbuf); noecho(); curs_set(0); pid_t p=(pid_t)atoi(pidbuf); end_ncurses(); int r=cgroup_move_pid(path,p); printf("move(%s,%d) => %d\n", path,(int)p,r); init_ncurses(); }
-            else if (sel==3){ echo(); curs_set(1); char name[64], quota[32], period[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Quota: "); getstr(quota); mvprintw(4,2,"Period: "); getstr(period); noecho(); curs_set(0); long q=atol(quota), per=atol(period); end_ncurses(); int r=cgroup_set_cpu_limit_quota(name,q,per); printf("set-cpu(%s,%ld,%ld) => %d\n", name,q,per,r); init_ncurses(); }
-            else if (sel==4){ echo(); curs_set(1); char name[64], mem[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Mem max bytes: "); getstr(mem); noecho(); curs_set(0); unsigned long m=strtoul(mem,NULL,10); end_ncurses(); int r=cgroup_set_memory_max(name,m); printf("set-mem(%s,%lu) => %d\n", name,m,r); init_ncurses(); }
-            mvprintw(8,2,"(Saída acima gerada fora do ncurses)"); mvprintw(9,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
+            if (sel==0){ echo(); curs_set(1); char name[64]; mvprintw(2,2,"Nome: "); getstr(name); noecho(); curs_set(0); 
+                if (strlen(name) > 0) { end_ncurses(); int r=cgroup_create(name); printf("create(%s) => %d\nPressione ENTER...", name,r); getchar(); init_ncurses(); } else { mvprintw(4,2,"Nome inválido!"); } }
+            else if (sel==1){ echo(); curs_set(1); char path[128]; mvprintw(2,2,"Path completo (/sys/fs/cgroup/<grupo>): "); getstr(path); noecho(); curs_set(0); 
+                if (strlen(path) > 0) { end_ncurses(); int r=cgroup_read_metrics(path); printf("read(%s) => %d\nPressione ENTER...", path,r); getchar(); init_ncurses(); } else { mvprintw(4,2,"Path inválido!"); } }
+            else if (sel==2){ echo(); curs_set(1); char path[128], pidbuf[16]; mvprintw(2,2,"Path: "); getstr(path); mvprintw(3,2,"PID: "); getstr(pidbuf); noecho(); curs_set(0); 
+                pid_t p=(pid_t)atoi(pidbuf); 
+                if (strlen(path) > 0 && p > 0) { end_ncurses(); int r=cgroup_move_pid(path,p); printf("move(%s,%d) => %d\nPressione ENTER...", path,(int)p,r); getchar(); init_ncurses(); } else { mvprintw(4,2,"Path/PID inválido!"); } }
+            else if (sel==3){ echo(); curs_set(1); char name[64], quota[32], period[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Quota: "); getstr(quota); mvprintw(4,2,"Period: "); getstr(period); noecho(); curs_set(0); 
+                long q=atol(quota), per=atol(period); 
+                if (strlen(name) > 0 && q > 0 && per > 0) { end_ncurses(); int r=cgroup_set_cpu_limit_quota(name,q,per); printf("set-cpu(%s,%ld,%ld) => %d\nPressione ENTER...", name,q,per,r); getchar(); init_ncurses(); } else { mvprintw(4,2,"Valores inválidos!"); } }
+            else if (sel==4){ echo(); curs_set(1); char name[64], mem[32]; mvprintw(2,2,"Nome: "); getstr(name); mvprintw(3,2,"Mem max bytes: "); getstr(mem); noecho(); curs_set(0); 
+                unsigned long m=strtoul(mem,NULL,10); 
+                if (strlen(name) > 0 && m > 0) { end_ncurses(); int r=cgroup_set_memory_max(name,m); printf("set-mem(%s,%lu) => %d\nPressione ENTER...", name,m,r); getchar(); init_ncurses(); } else { mvprintw(4,2,"Valores inválidos!"); } }
+            mvprintw(8,2,"Pressione qualquer tecla para continuar..."); refresh(); getch();
         } else if (ch>='1'&&ch<='6') sel=ch-'1';
     }
     end_ncurses();
@@ -195,66 +210,62 @@ void show_experiments_menu() {
         switch (exp_num) {
             case 1: /* Overhead */
                 mvprintw(4, 2, "Medindo overhead de monitoramento...");
-                mvprintw(5, 2, "- Coletando baseline sem monitoramento");
-                mvprintw(6, 2, "- Coletando com monitoramento ativo");
-                mvprintw(7, 2, "- Calculando diferença...");
                 refresh();
-                sleep(3);
-                mvprintw(9, 2, "Resultado: Overhead ~2.3%% de CPU");
-                mvprintw(10, 2, "Salvo em: output/experiment_overhead.csv");
-                if (fp) fprintf(fp, "exp1,overhead,2.3\n");
+                end_ncurses();
+                mkdir("output/experiments", 0755);
+                experiment_overhead();
+                init_ncurses();
+                mvprintw(9, 2, "Resultado: Overhead medido");
+                mvprintw(10, 2, "Salvo em: output/experiments/overhead_*.csv");
+                if (fp) fprintf(fp, "exp1,overhead,real\n");
                 break;
                 
             case 2: /* Namespaces */
                 mvprintw(4, 2, "Testando isolamento de namespaces...");
-                mvprintw(5, 2, "- Criando 5 processos isolados");
-                mvprintw(6, 2, "- Verificando isolamento PID");
-                mvprintw(7, 2, "- Verificando isolamento Network");
-                mvprintw(8, 2, "- Medindo overhead de isolamento");
                 refresh();
-                sleep(5);
-                mvprintw(10, 2, "Resultado: Isolamento total, overhead ~5.1%%");
-                mvprintw(11, 2, "Salvo em: output/experiment_namespace.csv");
-                if (fp) fprintf(fp, "exp2,namespace,5.1\n");
+                end_ncurses();
+                mkdir("output/experiments", 0755);
+                experiment_namespace_isolation(0); /* 0 = CLONE_NEWPID */
+                init_ncurses();
+                mvprintw(10, 2, "Resultado: Isolamento testado");
+                mvprintw(11, 2, "Salvo em: output/experiments/namespace_*.csv");
+                if (fp) fprintf(fp, "exp2,namespace,real\n");
                 break;
                 
             case 3: /* CPU Throttling */
                 mvprintw(4, 2, "Testando CPU Throttling via Cgroups...");
-                mvprintw(5, 2, "- Limitando CPU a 50%%");
-                mvprintw(6, 2, "- Executando workload CPU-bound");
-                mvprintw(7, 2, "- Medindo tempo de execução");
-                mvprintw(8, 2, "- Removendo limite");
                 refresh();
-                sleep(5);
-                mvprintw(10, 2, "Resultado: Com limite 2.2x mais lento (como esperado)");
-                mvprintw(11, 2, "Salvo em: output/experiment_cpu_throttling.csv");
-                if (fp) fprintf(fp, "exp3,cpu_throttling,2.2x\n");
+                end_ncurses();
+                mkdir("output/experiments", 0755);
+                experiment_cpu_throttling(50, 30); /* 50% CPU, 30s */
+                init_ncurses();
+                mvprintw(10, 2, "Resultado: Throttling medido");
+                mvprintw(11, 2, "Salvo em: output/experiments/cpu_*.csv");
+                if (fp) fprintf(fp, "exp3,cpu_throttling,real\n");
                 break;
                 
             case 4: /* Memory */
                 mvprintw(4, 2, "Testando limite de memória...");
-                mvprintw(5, 2, "- Alocando 1GB de RAM");
-                mvprintw(6, 2, "- Limitando a 512MB");
-                mvprintw(7, 2, "- Observando OOM killer");
-                mvprintw(8, 2, "- Medindo impacto");
                 refresh();
-                sleep(5);
-                mvprintw(10, 2, "Resultado: Limite aplicado, processo terminado em OOM");
-                mvprintw(11, 2, "Salvo em: output/experiment_memory.csv");
-                if (fp) fprintf(fp, "exp4,memory_limit,oom\n");
+                end_ncurses();
+                mkdir("output/experiments", 0755);
+                experiment_memory_limit(256); /* 256 MB */
+                init_ncurses();
+                mvprintw(10, 2, "Resultado: Limite testado");
+                mvprintw(11, 2, "Salvo em: output/experiments/memory_*.csv");
+                if (fp) fprintf(fp, "exp4,memory_limit,real\n");
                 break;
                 
             case 5: /* I/O */
                 mvprintw(4, 2, "Testando limite de I/O...");
-                mvprintw(5, 2, "- Escrevendo 100MB em disco");
-                mvprintw(6, 2, "- Limitando I/O a 10MB/s");
-                mvprintw(7, 2, "- Medindo tempo de escrita");
-                mvprintw(8, 2, "- Comparando com sem limite");
                 refresh();
-                sleep(5);
-                mvprintw(10, 2, "Resultado: Com limite ~10x mais lento (throttling funciona)");
-                mvprintw(11, 2, "Salvo em: output/experiment_io.csv");
-                if (fp) fprintf(fp, "exp5,io_limit,10x\n");
+                end_ncurses();
+                mkdir("output/experiments", 0755);
+                experiment_io_limit(50, 30); /* 50 MB/s, 30s */
+                init_ncurses();
+                mvprintw(10, 2, "Resultado: I/O throttling medido");
+                mvprintw(11, 2, "Salvo em: output/experiments/io_*.csv");
+                if (fp) fprintf(fp, "exp5,io_limit,real\n");
                 break;
         }
         
@@ -296,6 +307,7 @@ int show_main_menu(void) {
         clear();
         int max_y, max_x;
         getmaxyx(stdscr, max_y, max_x);
+        (void)max_x; /* Silenciar warning */
         
         /* Cabeçalho */
         attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
