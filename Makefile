@@ -23,10 +23,12 @@ $(BIN_DIR):
 	$(CC) $(CFLAGS) -c $< -o $@
 
 tests: CFLAGS += -DUNIT_TEST
-tests: test_runner
 
-test_runner: $(wildcard tests/*.c) $(filter src/main.o,$(OBJS))
-	$(CC) $(CFLAGS) -Iinclude -o $(BIN_DIR)/test_runner tests/*.c $(filter-out src/main.o,$(OBJS))
+tests: CFLAGS += -DUNIT_TEST
+tests: $(BIN_DIR)/test_runner
+
+$(BIN_DIR)/test_runner: $(filter-out src/main.o,$(OBJS)) $(wildcard tests/*.c) | $(BIN_DIR)
+	$(CC) $(CFLAGS) -Iinclude -o $@ $(filter-out src/main.o,$(OBJS)) tests/*.c
 
 clean:
 	rm -rf $(BIN_DIR)/*.o src/*.o $(BIN_DIR)/*
