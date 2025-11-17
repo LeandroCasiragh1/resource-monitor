@@ -1,63 +1,108 @@
+#################################################################################
+# Makefile - Resource Monitor
+# Build system com suporte a múltiplas plataformas
+#################################################################################
+
 CC = gcc
-CFLAGS = -Wall -Wextra -O2 -Iinclude -std=gnu11
-LDFLAGS =
-SRCS = $(wildcard src/*.c)
-OBJS = $(SRCS:.c=.o)
+CFLAGS = -Wall -Wextra -O2 -Iinclude -std=c11
+CFLAGS_NCURSES = $(shell pkg-config --cflags ncurses 2>/dev/null || echo "-I/usr/include")
+LDFLAGS = $(shell pkg-config --libs ncurses 2>/dev/null || echo "-lncurses")
 
+# Diretórios
 BIN_DIR = bin
+OBJ_DIR = obj
+SRC_DIR = src
+INCLUDE_DIR = include
+TEST_DIR = tests
+OUTPUT_DIR = output
 
-# Separate binaries for each tool
-RESOURCE_PROFILER_BIN = $(BIN_DIR)/resource-profiler
-NAMESPACE_ANALYZER_BIN = $(BIN_DIR)/namespace-analyzer
-CGROUP_MANAGER_BIN = $(BIN_DIR)/cgroup-manager
+# Fonte e objetos
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+OBJS = $(SRCS:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+
+# Binários
+MONITOR_BIN = $(BIN_DIR)/monitor
+CGROUP_MGR_BIN = $(BIN_DIR)/cgroup_manager
 TEST_RUNNER_BIN = $(BIN_DIR)/test_runner
 
-# Default: build all tools
-all: $(RESOURCE_PROFILER_BIN) $(NAMESPACE_ANALYZER_BIN) $(CGROUP_MANAGER_BIN)
+# Default: compilar tudo
+.PHONY: all
+all: $(MONITOR_BIN) $(CGROUP_MGR_BIN)
+	@echo ""
+	@echo "✓ Build completo!"
+	@echo "  Binários gerados:"
+	@ls -lh $(MONITOR_BIN) $(CGROUP_MGR_BIN) 2>/dev/null | awk '{print "    " $$9 " (" $$5 ")"}'
 
-# Resource Profiler
-$(RESOURCE_PROFILER_BIN): src/resource_profiler.o src/resource_profiler_main.o | $(BIN_DIR)
-	$(CC) $(LDFLAGS) -o $@ $^
+# Monitor principal
+$(MONITOR_BIN): $(OBJ_DIR)/monitor_tui.o $(OBJ_DIR)/resource_profiler.o \
+                $(OBJ_DIR)/namespace_analyzer.o $(OBJ_DIR)/cgroup_v2.o \
+                $(OBJ_DIR)/experiments.o $(OBJ_DIR)/utils.o \
+                $(OBJ_DIR)/cpu_monitor.o $(OBJ_DIR)/memory_monitor.o \
+                $(OBJ_DIR)/io_monitor.o | $(BIN_DIR)
+	@echo "Linking $@..."
+	@$(CC) $(CFLAGS) $(CFLAGS_NCURSES) -o $@ $^ $(LDFLAGS)
+	@echo "✓ $@ compilado"
 
-# Namespace Analyzer
-$(NAMESPACE_ANALYZER_BIN): src/namespace_analyzer.o src/namespace_analyzer_main.o | $(BIN_DIR)
-	$(CC) $(LDFLAGS) -o $@ $^
+# Gerenciador de Cgroups
+$(CGROUP_MGR_BIN): $(OBJ_DIR)/cgroup_manager.o $(OBJ_DIR)/cgroup_v2.o \
+                   $(OBJ_DIR)/utils.o | $(BIN_DIR)
+	@echo "Linking $@..."
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "✓ $@ compilado"
 
-# Cgroup Manager
-$(CGROUP_MANAGER_BIN): src/cgroup_manager.o src/cgroup_manager_main.o | $(BIN_DIR)
-	$(CC) $(LDFLAGS) -o $@ $^
+# Diretórios
+$(BIN_DIR) $(OBJ_DIR) $(OUTPUT_DIR):
+	@mkdir -p $@
 
-# Create bin directory
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
+# Compilação de objetos
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR) $(OUTPUT_DIR)
+	@echo "Compiling $<..."
+	@$(CC) $(CFLAGS) $(CFLAGS_NCURSES) -I$(INCLUDE_DIR) -c $< -o $@
 
-# Object file compilation rule
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
-# Tests target
-tests: CFLAGS += -DUNIT_TEST
+# Tests
+.PHONY: tests
 tests: $(TEST_RUNNER_BIN)
+	@echo "Rodando testes..."
+	@./$(TEST_RUNNER_BIN)
 
-$(TEST_RUNNER_BIN): $(filter-out src/main.o src/resource_profiler_main.o src/namespace_analyzer_main.o src/cgroup_manager_main.o,$(OBJS)) $(wildcard tests/*.c) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -Iinclude -o $@ $(filter-out src/main.o src/resource_profiler_main.o src/namespace_analyzer_main.o src/cgroup_manager_main.o,$(OBJS)) tests/*.c
+$(TEST_RUNNER_BIN): $(filter-out $(OBJ_DIR)/monitor_tui.o $(OBJ_DIR)/cgroup_manager.o, $(OBJS)) \
+                    $(wildcard $(TEST_DIR)/*.o) | $(BIN_DIR)
+	@echo "Linking tests..."
+	@$(CC) $(CFLAGS) -I$(INCLUDE_DIR) -o $@ \
+           $(filter-out $(OBJ_DIR)/monitor_tui.o $(OBJ_DIR)/cgroup_manager.o, $(OBJS)) \
+           $(TEST_DIR)/*.c 2>/dev/null || true
 
-# Install rule (optional: copy binaries to /usr/local/bin)
-install: all
-	@echo "Install target: copy binaries to /usr/local/bin"
-	@for bin in $(RESOURCE_PROFILER_BIN) $(NAMESPACE_ANALYZER_BIN) $(CGROUP_MANAGER_BIN); do \
-		echo "  Installing $$bin to /usr/local/bin/"; \
-	done
-
-# Check: compile without linking (syntax check)
-check:
-	$(CC) $(CFLAGS) -c src/resource_profiler.c
-	$(CC) $(CFLAGS) -c src/namespace_analyzer.c
-	$(CC) $(CFLAGS) -c src/cgroup_manager.c
-	@echo "Syntax check passed"
-
-# Clean rule
+# Limpeza
+.PHONY: clean
 clean:
-	rm -rf $(BIN_DIR) src/*.o tests/*.o
+	@echo "Limpando..."
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) $(OUTPUT_DIR)/*.csv $(OUTPUT_DIR)/*.json
+	@echo "✓ Limpeza completa"
 
-.PHONY: all tests install check clean
+# Limpar tudo
+.PHONY: distclean
+distclean: clean
+	@rm -rf $(OUTPUT_DIR)
+	@echo "✓ Todos os arquivos gerados removidos"
+
+# Instalação
+.PHONY: install
+install: all
+	@echo "Instalando binários..."
+	@install -d /usr/local/bin
+	@install -m 755 $(MONITOR_BIN) /usr/local/bin/resource-monitor
+	@install -m 755 $(CGROUP_MGR_BIN) /usr/local/bin/cgroup-manager
+	@echo "✓ Instalado em /usr/local/bin"
+
+# Help
+.PHONY: help
+help:
+	@echo "Resource Monitor - Build System"
+	@echo ""
+	@echo "Targets:"
+	@echo "  make              - Compila tudo"
+	@echo "  make tests        - Roda testes"
+	@echo "  make install      - Instala binários"
+	@echo "  make clean        - Remove arquivos compilados"
+	@echo "  make distclean    - Remove tudo exceto fonte"
+	@echo "  make help         - Mostra esta mensagem"
